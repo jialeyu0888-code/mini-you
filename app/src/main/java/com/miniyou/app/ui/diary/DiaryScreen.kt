@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -215,22 +214,22 @@ fun MonthCalendar(month: YearMonth, selected: LocalDate, marks: Map<Long, String
             Row {
                 (0 until 7).forEach { col ->
                     val dayNum = row * 7 + col - offset + 1
-                    Box(Modifier.weight(1f).aspectRatio(1f).padding(2.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.weight(1f).aspectRatio(0.86f).padding(2.dp), contentAlignment = Alignment.Center) {
                         if (dayNum in 1..month.lengthOfMonth()) {
                             val date = month.atDay(dayNum)
                             val mark = marks[date.toEpochDay()]
                             val isSel = date == selected
                             Box(
-                                Modifier.fillMaxSize().clip(CircleShape)
+                                Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp))
                                     .background(if (isSel) MaterialTheme.colorScheme.primary else if (mark != null) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                                    .then(if (date == today && !isSel) Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
+                                    .then(if (date == today && !isSel) Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(14.dp)) else Modifier)
                                     .clickable { onSelect(date) },
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("$dayNum", fontSize = 13.sp, fontWeight = if (date == today) FontWeight.Bold else FontWeight.Normal,
+                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                                    Text("$dayNum", fontSize = 13.sp, lineHeight = 15.sp, fontWeight = if (date == today) FontWeight.Bold else FontWeight.Normal,
                                         color = if (isSel) Color.White else MaterialTheme.colorScheme.onSurface)
-                                    if (mark != null) Text(mark, fontSize = 11.sp)
+                                    if (mark != null) Text(mark, fontSize = 13.sp, lineHeight = 15.sp)
                                 }
                             }
                         }

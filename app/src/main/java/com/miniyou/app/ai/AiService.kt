@@ -196,16 +196,16 @@ class AiService(private val context: Context, private val settings: SettingsStor
         val prompt = """
             今天是 ${today()}。这是孕妇的 B超单/产检单/建档资料照片。请找出可用于计算孕周的信息，返回：
             {
-              "lmp": "末次月经日期 YYYY-MM-DD 或 null",
-              "dueDate": "预产期 YYYY-MM-DD 或 null",
+              "lmp": "单据上写明的末次月经日期 YYYY-MM-DD 或 null",
+              "dueDate": "单据上写明的预产期 YYYY-MM-DD 或 null",
               "examDate": "检查日期 YYYY-MM-DD 或 null",
               "gestationalWeek": "检查时孕周，如 12+3，或 null"
             }
-            只输出 JSON。
+            每个字段只填写单据上明确印出的内容，不要自己推算或换算日期，没有就填 null。只输出 JSON。
         """.trimIndent()
         val o = ZhipuClient.visionJson(key, BASE_SYSTEM, prompt, images(uris))
-        parseDateOrNull(o.s("dueDate"))?.let { return PregnancyDraft(lmpFromDueDate(it), "预产期 ${it.format(DateFmt)}") }
         parseDateOrNull(o.s("lmp"))?.let { return PregnancyDraft(it, "末次月经 ${it.format(DateFmt)}") }
+        parseDateOrNull(o.s("dueDate"))?.let { return PregnancyDraft(lmpFromDueDate(it), "预产期 ${it.format(DateFmt)}") }
         val exam = parseDateOrNull(o.s("examDate"))
         val ga = o.s("gestationalWeek")
         if (exam != null && ga.isNotBlank()) {

@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "要发布的 tag（例如 v0.1.0）"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 查找预先构建的 APK（release-assets 分支）
+        id: prebuilt
+        run: |
+          mkdir -p dist
+          if git fetch --depth=1 origin release-assets 2>/dev/null; then
+            files=$(git ls-tree -r --name-only FETCH_HEAD | grep -E "^${TAG}/.*\.apk$" || true)
+            for f in $files; do git show "FETCH_HEAD:$f" > "dist/$(basename "$f")"; done
+            if [ -n "$files" ]; then
+              echo "found=true" >> "$GITHUB_OUTPUT"
+              git show "FETCH_HEAD:${TAG}/RELEASE_NOTES.md" > dist/RELEASE_NOTES.md 2>/dev/null || true
+            fi
+          fi
+          ls -la dist
+
+      - name: 安装 JDK
+        if: steps.prebuilt.outputs.found != 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: 从源码构建 release APK
+        if: steps.prebuilt.outputs.found != 'true'
+        env:
+          ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          MINIYOU_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          MINIYOU_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          MINIYOU_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            export MINIYOU_STORE_FILE="$RUNNER_TEMP/release.jks"
+          fi
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk "dist/mini-you-${TAG}.apk"
+
+      - name: 发布 GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          name: 小小你 ${{ env.TAG }}
+          body_path: ${{ hashFiles('dist/RELEASE_NOTES.md') != '' && 'dist/RELEASE_NOTES.md' || '' }}
+          generate_release_notes: ${{ hashFiles('dist/RELEASE_NOTES.md') == '' }}
+          files: dist/*.apk

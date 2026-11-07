@@ -128,11 +128,11 @@ fun SoftCard(
     val colors = CardDefaults.cardColors(containerColor = color)
     val border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
     if (onClick != null) {
-        Card(onClick = onClick, modifier = modifier, shape = shape, colors = colors, border = border) {
+        Card(onClick = onClick, modifier = modifier.fillMaxWidth(), shape = shape, colors = colors, border = border) {
             Column(Modifier.padding(contentPadding), content = content)
         }
     } else {
-        Card(modifier = modifier, shape = shape, colors = colors, border = border) {
+        Card(modifier = modifier.fillMaxWidth(), shape = shape, colors = colors, border = border) {
             Column(Modifier.padding(contentPadding), content = content)
         }
     }

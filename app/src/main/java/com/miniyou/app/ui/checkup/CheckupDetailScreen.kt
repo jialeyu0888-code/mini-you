@@ -124,7 +124,7 @@ fun CheckupDetailContent(c: Checkup, nav: NavController, onDeleted: () -> Unit) 
             PhotoStrip(c.photos, size = 110.dp)
         }
         OutlinedButton(onClick = { nav.navigate(Routes.checkupEdit(c.id)) }, modifier = Modifier.fillMaxWidth()) { Text("编辑这条记录") }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(96.dp))
     }
     if (confirm) {
         ConfirmDialog("删除产检记录", "删除后无法恢复，确定删除吗？", onDismiss = { confirm = false }) {

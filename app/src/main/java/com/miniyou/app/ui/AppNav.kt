@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.outlined.Assignment
+import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.ShoppingBag
@@ -88,7 +88,7 @@ private data class Tab(val route: String, val label: String, val icon: ImageVect
 
 private val tabs = listOf(
     Tab(Routes.HOME, "首页", Icons.Outlined.Home, Icons.Filled.Home),
-    Tab(Routes.CHECKUPS, "产检", Icons.Outlined.Assignment, Icons.Outlined.Assignment),
+    Tab(Routes.CHECKUPS, "产检", Icons.AutoMirrored.Outlined.Assignment, Icons.AutoMirrored.Outlined.Assignment),
     Tab(Routes.DIARY, "日记", Icons.Outlined.AutoStories, Icons.Outlined.AutoStories),
     Tab(Routes.SHOPPING, "购物", Icons.Outlined.ShoppingBag, Icons.Outlined.ShoppingBag),
     Tab(Routes.KNOWLEDGE, "百科", Icons.AutoMirrored.Outlined.MenuBook, Icons.AutoMirrored.Outlined.MenuBook),
