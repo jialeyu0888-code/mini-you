@@ -1,5 +1,6 @@
 package com.miniyou.app.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -8,18 +9,11 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.MenuBook
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.automirrored.outlined.Assignment
-import androidx.compose.material.icons.outlined.AutoStories
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.ShoppingBag
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -35,8 +29,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.miniyou.app.R
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -90,7 +85,7 @@ object Routes {
     fun lesson(id: String) = "lesson/$id"
 }
 
-private data class Tab(val route: String, val label: String, val icon: ImageVector, val selectedIcon: ImageVector) {
+private data class Tab(val route: String, val label: String, val icon: Int) {
     fun matches(current: String) = current == route || current.startsWith("$route?")
 }
 
@@ -123,11 +118,11 @@ fun NavController.open(route: String) {
 }
 
 private val tabs = listOf(
-    Tab(Routes.HOME, "首页", Icons.Outlined.Home, Icons.Filled.Home),
-    Tab(Routes.CHECKUPS, "产检", Icons.AutoMirrored.Outlined.Assignment, Icons.AutoMirrored.Outlined.Assignment),
-    Tab(Routes.DIARY, "日记", Icons.Outlined.AutoStories, Icons.Outlined.AutoStories),
-    Tab(Routes.SHOPPING, "购物", Icons.Outlined.ShoppingBag, Icons.Outlined.ShoppingBag),
-    Tab(Routes.KNOWLEDGE, "百科", Icons.AutoMirrored.Outlined.MenuBook, Icons.AutoMirrored.Outlined.MenuBook),
+    Tab(Routes.HOME, "首页", R.drawable.home_tab_home),
+    Tab(Routes.CHECKUPS, "产检", R.drawable.home_tab_checkup),
+    Tab(Routes.DIARY, "日记", R.drawable.home_tab_diary),
+    Tab(Routes.SHOPPING, "购物", R.drawable.home_tab_shopping),
+    Tab(Routes.KNOWLEDGE, "百科", R.drawable.home_tab_knowledge),
 )
 
 /** 是否由外层底部导航栏负责底部系统栏留白。 */
@@ -179,9 +174,9 @@ fun AppNav() {
                         NavigationBarItem(
                             selected = selected,
                             onClick = { nav.switchTab(tab.route) },
-                            icon = { Icon(if (selected) tab.selectedIcon else tab.icon, null) },
+                            icon = { Image(painterResource(tab.icon), null, Modifier.size(26.dp)) },
                             label = { Text(tab.label) },
-                            colors = NavigationBarItemDefaults.colors(indicatorColor = MaterialTheme.colorScheme.primaryContainer),
+                            colors = NavigationBarItemDefaults.colors(indicatorColor = androidx.compose.ui.graphics.Color(0xFFF8D0D8)),
                         )
                     }
                 }
@@ -203,9 +198,9 @@ fun AppNav() {
                             NavigationRailItem(
                                 selected = selected,
                                 onClick = { nav.switchTab(tab.route) },
-                                icon = { Icon(if (selected) tab.selectedIcon else tab.icon, null) },
+                                icon = { Image(painterResource(tab.icon), null, Modifier.size(26.dp)) },
                                 label = { Text(tab.label) },
-                                colors = NavigationRailItemDefaults.colors(indicatorColor = MaterialTheme.colorScheme.primaryContainer),
+                                colors = NavigationRailItemDefaults.colors(indicatorColor = androidx.compose.ui.graphics.Color(0xFFF8D0D8)),
                                 modifier = Modifier.padding(vertical = 4.dp),
                             )
                         }
