@@ -1,0 +1,22 @@
+# Gradle / Android Studio
+.gradle/
+build/
+/app/build/
+.idea/
+*.iml
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+
+# 本地配置（含 SDK 路径与智谱 API Key，切勿提交）
+local.properties
+
+# 签名文件与口令（切勿提交）
+keystore.properties
+*.jks
+*.keystore
+
+# 构建产物
+*.apk
+*.aab

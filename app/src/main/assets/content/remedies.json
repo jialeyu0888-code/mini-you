@@ -1,0 +1,1463 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": "1.0.0",
+  "updatedAt": "2026-11-07",
+  "locale": "zh-CN",
+  "title": "孕期不良反应缓解攻略",
+  "disclaimer": "本内容仅供孕期健康科普参考，不能替代医生的面诊、诊断与治疗。每位孕妈的身体状况、孕周和合并症不同，适合的方法也不同。任何药物（包括维生素、中成药、外用药、进口代购药）都必须在产科医生或药师指导下使用，不要自行购买、加量或长期服用。如出现文中「何时就医」列出的情况，或你感觉明显不对劲，请及时就诊或拨打 120。",
+  "medicationNotice": "需遵医嘱",
+  "medicationNoticeDetail": "药物类方法仅为科普，用药前请告知医生孕周、正在服用的其他药物（含孕期维生素、铁剂、钙剂）和过敏史，由医生决定是否使用、剂量和疗程。",
+  "evidenceLevels": [
+    { "id": "guideline", "label": "指南推荐", "description": "国内外产科指南或权威机构推荐的方法" },
+    { "id": "experience", "label": "常用经验", "description": "临床或孕妈群体中常用、风险较低，但缺少高质量研究证据" },
+    { "id": "folk", "label": "民间做法", "description": "流传较广的偏方，证据有限，可以试试但别指望替代正规处理" }
+  ],
+  "methodTypes": [
+    { "id": "diet", "label": "饮食" },
+    { "id": "lifestyle", "label": "生活" },
+    { "id": "medication", "label": "药物" }
+  ],
+  "trimesters": [
+    { "id": "early", "label": "孕早期", "weekRange": "孕 0–13+6 周", "startWeek": 0, "endWeek": 13 },
+    { "id": "mid", "label": "孕中期", "weekRange": "孕 14–27+6 周", "startWeek": 14, "endWeek": 27 },
+    { "id": "late", "label": "孕晚期", "weekRange": "孕 28 周至分娩", "startWeek": 28, "endWeek": 42 }
+  ],
+  "categories": [
+    { "id": "digestive", "label": "消化系统" },
+    { "id": "sleep", "label": "睡眠与精神" },
+    { "id": "musculoskeletal", "label": "肌肉骨骼" },
+    { "id": "circulation", "label": "循环与水肿" },
+    { "id": "other", "label": "其他不适" }
+  ],
+  "generalEmergencySigns": [
+    "阴道流血（无论多少）或流液",
+    "规律腹痛、持续腹痛或腹部发硬不缓解",
+    "孕 28 周后胎动明显减少或消失",
+    "剧烈头痛、视物模糊、眼前闪光，或面部和手突然肿胀",
+    "胸痛、呼吸困难、晕厥",
+    "发热 38℃ 及以上",
+    "单侧小腿肿痛、发红发热"
+  ],
+  "remedies": [
+    {
+      "id": "nausea-vomiting",
+      "symptom": "孕吐 / 孕反",
+      "aliases": ["早孕反应", "恶心", "呕吐", "害喜", "孕吐"],
+      "category": "digestive",
+      "trimesters": ["early", "mid"],
+      "trimesterNote": "多在孕 6 周前后出现，孕 8–10 周最明显，大多数在孕 12–16 周逐渐缓解；少数会持续到孕中期甚至更久。",
+      "overview": "孕吐和孕早期激素（hCG 等）快速升高有关，空腹、闻到油烟和气味时更容易加重。多数是生理现象，目标是「少量多次吃得进、喝得进」，不用逼自己吃够三餐。",
+      "methods": [
+        {
+          "id": "nv-soda-crackers",
+          "name": "苏打饼干垫肚子",
+          "type": "diet",
+          "evidence": "experience",
+          "requiresDoctor": false,
+          "howTo": "床头放几块原味苏打饼干，早上睁眼后先在床上慢慢嚼 2–3 块，躺 10–15 分钟再起床。白天两餐之间也可以吃几块，避免长时间空腹。",
+          "cautions": [
+            "选原味、配料简单的，少选夹心、奶油、芝士味。",
+            "苏打饼干含盐较多，每天吃个几块即可；有水肿、高血压的孕妈注意控制量。",
+            "它是精制碳水，有妊娠期糖尿病风险或血糖偏高时，搭配蛋白质（如一小杯牛奶、一个鸡蛋）一起吃，不要拿它当正餐。"
+          ]
+        },
+        {
+          "id": "nv-soda-water",
+          "name": "小口喝苏打水",
+          "type": "diet",
+          "evidence": "experience",
+          "requiresDoctor": false,
+          "howTo": "恶心时冰镇后小口慢慢喝，一次几口就停，隔一会儿再喝。很多孕妈觉得微凉、带点气泡的水比白开水更容易咽下去。",
+          "cautions": [
+            "注意区分：「苏打水」指含碳酸氢钠的弱碱性饮用水，「气泡水」只是充了二氧化碳，两者都可以试，以自己喝得舒服为准。",
+            "看配料表，优先选无糖、无咖啡因的；很多调味苏打水含糖或代糖，别当水大量喝。",
+            "苏打水含钠，有水肿、高血压或医生要求限盐时少喝。",
+            "气泡多可能加重胃胀气，胀气明显时选无气的。"
+          ]
+        },
+        {
+          "id": "nv-cola",
+          "name": "小口喝可口可乐",
+          "type": "diet",
+          "evidence": "folk",
+          "requiresDoctor": false,
+          "howTo": "实在吃不下东西时，可以冰镇后小口抿几口，或倒出来放一会儿让气跑掉一些再喝（很多孕妈觉得「跑气的可乐」更压恶心）。其中的糖能快速补一点能量。",
+          "cautions": [
+            "含咖啡因：一罐 330ml 约 30–35mg。孕期咖啡因建议每天不超过 200mg，要和咖啡、茶、巧克力加在一起算。",
+            "一罐普通可乐含糖约 35g，有妊娠期糖尿病或血糖偏高的孕妈不建议喝含糖款；无糖款含代糖，偶尔少量可以。",
+            "只作为应急「压一压」，不要每天当水喝，也不能代替补液。",
+            "可乐偏酸，刚吐完喝要注意保护牙齿：先用清水漱口。"
+          ]
+        },
+        {
+          "id": "nv-electrolyte-drink",
+          "name": "电解质水补液（如外星人电解质水）",
+          "type": "diet",
+          "evidence": "experience",
+          "requiresDoctor": false,
+          "howTo": "吐得比较多、出汗多时，用电解质水小口多次补，每次几口，5–10 分钟一次，比一次猛灌更不容易再吐。可以冰镇或常温，按自己的接受度来。",
+          "cautions": [
+            "认准「电解质水」，不要拿成同品牌的「能量饮料」，后者可能含咖啡因、牛磺酸等。",
+            "外星人等运动型电解质水钠含量低于医用口服补液盐，轻度呕吐时补水够用；吐得多时，医用「口服补液盐 Ⅲ」更规范，可咨询医生或药师。",
+            "无糖款一般用赤藓糖醇、三氯蔗糖等甜味剂，一天喝太多可能引起腹胀、腹泻，适量即可。",
+            "如果喝什么吐什么、一整天几乎没尿，电解质水已经不够了，需要去医院输液。"
+          ]
+        },
+        {
+          "id": "nv-small-meals",
+          "name": "少量多餐、吃干吃凉",
+          "type": "diet",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "每 2–3 小时吃一点，一次只吃几口；想吃什么就先吃什么。干的（馒头片、面包、饼干）和凉的、气味淡的食物通常更容易接受。喝水和吃饭分开，饭前饭后半小时再喝。",
+          "cautions": [
+            "避开油腻、辛辣、气味重的食物，厨房油烟大时让家人做饭或开窗通风。",
+            "孕早期吃不下没关系，宝宝这时需要的热量很少，但要保证每天有碳水摄入，避免长时间饥饿产生酮体。"
+          ]
+        },
+        {
+          "id": "nv-ginger",
+          "name": "生姜",
+          "type": "diet",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "几片鲜姜泡温水或煮成淡姜茶小口喝，也可以含一片姜糖。",
+          "cautions": [
+            "适量即可，别大量长期吃；有胃灼热（烧心）的孕妈喝姜茶可能更难受。",
+            "正在服用抗凝药（如低分子肝素、阿司匹林）的孕妈先问医生。"
+          ]
+        },
+        {
+          "id": "nv-prenatal-vitamin-timing",
+          "name": "调整孕期维生素的服用时间",
+          "type": "lifestyle",
+          "evidence": "experience",
+          "requiresDoctor": false,
+          "howTo": "含铁的复合维生素容易加重恶心，可以改到睡前或随餐吃。孕吐期间实在吃不下复合维生素，可以和医生商量暂时只吃叶酸。",
+          "cautions": [
+            "叶酸（一般每天 0.4mg，具体以医生建议为准）在孕早期不能停。"
+          ]
+        },
+        {
+          "id": "nv-acupressure",
+          "name": "按压内关穴 / 止吐腕带",
+          "type": "lifestyle",
+          "evidence": "experience",
+          "requiresDoctor": false,
+          "howTo": "内关穴在手腕横纹往上约三横指、两根筋之间。用拇指按压 1–2 分钟，两手交替；也可以买孕吐腕带持续按压。",
+          "cautions": [
+            "研究结论不一致，有人有效有人无感，可以作为辅助手段。"
+          ]
+        },
+        {
+          "id": "nv-rest-smell",
+          "name": "多休息、避开诱发气味",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "疲劳会让恶心加重，能睡就多睡一会儿。记录让自己想吐的气味（油烟、香水、某些食物），尽量避开；常开窗通风，随身带柠檬片或薄荷糖闻一闻。起身时动作放慢。",
+          "cautions": []
+        },
+        {
+          "id": "nv-vitamin-b6",
+          "name": "维生素 B6（吡哆醇）",
+          "type": "medication",
+          "evidence": "guideline",
+          "requiresDoctor": true,
+          "rxLabel": "需遵医嘱",
+          "howTo": "维生素 B6 是国内外指南推荐的孕吐一线用药之一，可单独使用，也可以和多西拉敏联用。具体剂量和服用次数由医生决定。",
+          "cautions": [
+            "需遵医嘱。",
+            "关于「维生素 B3 缓解孕吐」：常被推荐的其实是维生素 B6，不是 B3。B3 是烟酸，目前没有证据显示它能缓解孕吐，不建议为了止吐单独补 B3。孕期复合维生素里本身含有常规剂量的 B3，正常吃没问题；但单独大剂量补烟酸可能引起皮肤潮红、肝功能异常。",
+            "另一个容易混淆的是维生素 B1：呕吐严重、长期吃不下饭时，医生可能会补充 B1（预防维生素 B1 缺乏引起的脑病），这也需要医生评估。",
+            "B6 也不是越多越好，长期超大剂量可能损伤周围神经，不要自行加量。"
+          ]
+        },
+        {
+          "id": "nv-doxylamine",
+          "name": "多西拉敏 / 多西拉敏 + 维生素 B6 复方",
+          "type": "medication",
+          "evidence": "guideline",
+          "requiresDoctor": true,
+          "rxLabel": "需遵医嘱",
+          "howTo": "多西拉敏是一种抗组胺药。多西拉敏与维生素 B6 的复方制剂（国外常见缓释剂型）是美国妇产科医师学会（ACOG）等推荐的孕吐一线药物，单用 B6 效果不够时，医生可能会加用或换成复方。通常睡前服用为主，按医生安排调整白天剂量。",
+          "cautions": [
+            "需遵医嘱。",
+            "常见副作用是嗜睡、口干、头晕、便秘，服药后不要开车或从事高空、精细操作。",
+            "国内获批的剂型和购买渠道有限，有些孕妈通过代购购买国外助眠药（单片剂量和孕吐专用复方不同）。代购药没有中文说明书、剂量也不一样，务必拿给医生或药师确认后再吃。",
+            "注意同一品牌下有的产品成分是苯海拉明而不是多西拉敏，购买前一定核对成分表。",
+            "不要和其他助眠药、抗过敏药、含酒精的东西同时使用。"
+          ]
+        },
+        {
+          "id": "nv-hospital-antiemetics",
+          "name": "医院止吐与补液治疗",
+          "type": "medication",
+          "evidence": "guideline",
+          "requiresDoctor": true,
+          "rxLabel": "需遵医嘱",
+          "howTo": "以上方法都无效、或已经脱水时，医生会根据情况选择其他止吐药（如甲氧氯普胺、昂丹司琼等），并通过静脉输液补充水分、电解质和维生素（含 B1）。",
+          "cautions": [
+            "需遵医嘱。",
+            "这些药都需要医生评估孕周和风险后开具，不要自行购买。"
+          ]
+        }
+      ],
+      "whenToSeeDoctor": [
+        "吃什么吐什么、喝水也吐，持续超过 24 小时",
+        "尿很少、颜色很深，或超过 8 小时没有排尿",
+        "体重比孕前下降超过 5%（如 50kg 的孕妈掉了 2.5kg 以上）",
+        "头晕乏力、站起来眼前发黑、心慌",
+        "呕吐物带血或咖啡色物质",
+        "伴有腹痛、发热、腹泻或剧烈头痛",
+        "孕 16 周后才开始出现明显呕吐，或者一度缓解后又突然加重（需要排除其他疾病）",
+        "医院尿检提示尿酮体阳性（+ 以上）"
+      ]
+    },
+    {
+      "id": "bloating",
+      "symptom": "胃胀气",
+      "aliases": ["肚子胀", "胀气", "打嗝", "放屁多", "消化不良"],
+      "category": "digestive",
+      "trimesters": ["early", "mid", "late"],
+      "trimesterNote": "整个孕期都可能出现。孕早期主要因孕激素让肠胃蠕动变慢；孕晚期子宫变大挤压胃肠，饭后胀感更明显。",
+      "overview": "孕激素会让胃肠道「变懒」，食物和气体停留时间变长，就容易胀。调整吃法、多活动通常能明显改善。",
+      "methods": [
+        {
+          "id": "bl-apple-water",
+          "name": "煮苹果水",
+          "type": "diet",
+          "evidence": "folk",
+          "requiresDoctor": false,
+          "howTo": "一个苹果洗净去核切块（可以带皮），加 500–800ml 清水，大火煮开后转小火煮 10–15 分钟，放温后小口喝水，煮软的苹果也可以吃几块。饭后或胀气时喝一小碗。",
+          "cautions": [
+            "这是孕妈群体中流传较广的经验做法，科学证据有限；煮过的苹果更温和，部分人喝了觉得舒服。",
+            "生苹果中的果糖、山梨醇对部分人反而会产气，如果吃生苹果后更胀，就只喝煮过的水。",
+            "不要加冰糖、红糖；有妊娠期糖尿病时注意量，一天一小碗即可。"
+          ]
+        },
+        {
+          "id": "bl-eating-habits",
+          "name": "细嚼慢咽、少量多餐",
+          "type": "diet",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "每餐七八分饱，一天分 5–6 次吃；每口多嚼几下，吃饭时少说话，减少吞进去的空气。",
+          "cautions": [
+            "少用吸管喝东西，少嚼口香糖，这些都会让人吞进更多空气。"
+          ]
+        },
+        {
+          "id": "bl-avoid-gas-foods",
+          "name": "减少产气食物",
+          "type": "diet",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "胀气明显时，暂时少吃豆类、洋葱、西兰花、卷心菜、红薯、碳酸饮料和油炸食物。可以记几天饮食日记，找出自己特别容易胀的食物。",
+          "cautions": [
+            "不需要长期全部忌口，蔬菜和豆制品对孕期营养很重要，只针对让你明显不舒服的食物减量。",
+            "苏打水、气泡水、可乐等含气饮料可能加重胀气，孕吐期间用它们压恶心的孕妈要留意平衡。"
+          ]
+        },
+        {
+          "id": "bl-walk",
+          "name": "饭后散步",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "饭后休息 15–20 分钟后，慢走 15–30 分钟，帮助胃肠蠕动和排气。",
+          "cautions": [
+            "饭后不要马上平躺。",
+            "有先兆流产、前置胎盘等医生要求卧床或限制活动的情况，按医生要求来。"
+          ]
+        },
+        {
+          "id": "bl-loose-clothes",
+          "name": "穿宽松衣物",
+          "type": "lifestyle",
+          "evidence": "experience",
+          "requiresDoctor": false,
+          "howTo": "选择不勒腰腹的孕妇裤和内衣，减少对胃肠的压迫。",
+          "cautions": []
+        },
+        {
+          "id": "bl-simethicone",
+          "name": "西甲硅油",
+          "type": "medication",
+          "evidence": "experience",
+          "requiresDoctor": true,
+          "rxLabel": "需遵医嘱",
+          "howTo": "西甲硅油可以帮助消除肠道里的气泡，基本不被人体吸收，胀气严重时医生可能会推荐。",
+          "cautions": [
+            "需遵医嘱。",
+            "不要自行使用促胃动力药、含中药成分的消食片或「通气」茶饮，部分成分孕期不宜。"
+          ]
+        }
+      ],
+      "whenToSeeDoctor": [
+        "腹胀伴有持续或阵发性腹痛、腹部变硬",
+        "腹胀伴呕吐、几天没有排便也不排气",
+        "伴有发热、腹泻或便血",
+        "右上腹或上腹部持续疼痛（孕晚期需排除妊娠期高血压相关的肝脏问题）",
+        "腹胀伴阴道流血或流液"
+      ]
+    },
+    {
+      "id": "heartburn",
+      "symptom": "胃酸 / 烧心",
+      "aliases": ["反酸", "胃灼热", "烧心", "胃食管反流", "泛酸水"],
+      "category": "digestive",
+      "trimesters": ["mid", "late"],
+      "trimesterNote": "孕中期开始增多，孕晚期最明显。原因是孕激素让胃和食管连接处的「阀门」变松，加上子宫上顶胃部。",
+      "overview": "典型感觉是胸骨后火辣辣、嘴里发酸发苦，饭后和躺下时加重。生活调整是第一步，不够时可以在医生指导下用胃黏膜保护类药物。",
+      "methods": [
+        {
+          "id": "hb-meal-pattern",
+          "name": "少量多餐、睡前 2–3 小时不进食",
+          "type": "diet",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "每餐吃少一点，加餐补足营养；晚餐和睡觉之间隔 2–3 小时，睡前别吃夜宵、别大量喝水。",
+          "cautions": []
+        },
+        {
+          "id": "hb-avoid-triggers",
+          "name": "避开诱发食物",
+          "type": "diet",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "少吃油腻油炸、辛辣、过酸（柠檬、醋、酸菜）、过甜的食物，少喝浓茶、咖啡、碳酸饮料，巧克力和薄荷也可能加重反酸。",
+          "cautions": [
+            "每个人的诱因不同，记录哪些食物吃完更容易烧心，有针对性地减少。"
+          ]
+        },
+        {
+          "id": "hb-milk-snack",
+          "name": "烧心时喝几口温牛奶或吃点苏打饼干",
+          "type": "diet",
+          "evidence": "experience",
+          "requiresDoctor": false,
+          "howTo": "轻度烧心时，喝几口温牛奶或酸奶、嚼几块苏打饼干，有些孕妈感觉可以暂时缓解。",
+          "cautions": [
+            "效果因人而异，少量即可，牛奶喝多了脂肪反而可能加重反酸。",
+            "不要直接冲小苏打（碳酸氢钠）水喝来中和胃酸，反复大量服用可能导致体内酸碱和钠失衡。"
+          ]
+        },
+        {
+          "id": "hb-sleep-position",
+          "name": "垫高上半身、左侧卧",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "睡觉时把床头抬高 10–15cm，或用楔形枕把上半身垫高（不是只垫头）；尽量左侧卧。",
+          "cautions": [
+            "只垫高枕头会让脖子弯折、腹部受压，反而可能更难受。"
+          ]
+        },
+        {
+          "id": "hb-posture",
+          "name": "饭后保持直立",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "饭后 1 小时内不要平躺、不要弯腰捡东西或做家务，可以坐直或慢走。穿宽松衣服，不束腰。",
+          "cautions": []
+        },
+        {
+          "id": "hb-alginate",
+          "name": "嘉胃斯康（海藻酸钠类，藻酸盐抗反流药）",
+          "type": "medication",
+          "evidence": "guideline",
+          "requiresDoctor": true,
+          "rxLabel": "需遵医嘱",
+          "howTo": "嘉胃斯康的主要成分是海藻酸钠，配合碳酸氢钠和碳酸钙。它进入胃里后会在胃内容物表面形成一层「凝胶筏」，物理性地挡住胃酸往上反，同时中和一部分胃酸。成分基本不被吸收入血，是孕期烧心常用、相对安全的选择。一般在饭后和睡前服用，具体用量和次数按医生或药品说明书。",
+          "cautions": [
+            "需遵医嘱。",
+            "和铁剂、部分其他药物需要错开约 2 小时服用，因为其中的钙等成分会影响铁的吸收。",
+            "含钠，有妊娠期高血压、子痫前期或医生要求限盐的孕妈，用前务必告诉医生。",
+            "用药后症状仍然反复、需要长期每天吃，应复诊，由医生评估是否换用其他药物。"
+          ]
+        },
+        {
+          "id": "hb-antacid-other",
+          "name": "其他抑酸 / 抗酸药（铝碳酸镁、法莫替丁等）",
+          "type": "medication",
+          "evidence": "guideline",
+          "requiresDoctor": true,
+          "rxLabel": "需遵医嘱",
+          "howTo": "铝碳酸镁等抗酸药孕期也较常用；症状严重、生活调整和藻酸盐类效果不佳时，医生可能会开 H2 受体阻滞剂（如法莫替丁）或质子泵抑制剂（如奥美拉唑）。",
+          "cautions": [
+            "需遵医嘱。",
+            "避免自行使用含铋剂、含阿司匹林的胃药，以及成分不明的中成药胃药。"
+          ]
+        }
+      ],
+      "whenToSeeDoctor": [
+        "用药和调整生活后仍然每天烧心，影响吃饭和睡觉",
+        "吞咽困难、吞咽疼痛，或吃不下东西导致体重下降",
+        "呕血、呕吐咖啡色物质，或大便发黑",
+        "上腹部（尤其右上腹）剧烈疼痛，伴头痛、视物模糊、血压升高——需警惕子痫前期或 HELLP 综合征，请立即就医",
+        "胸痛伴气短、出冷汗"
+      ]
+    },
+    {
+      "id": "constipation",
+      "symptom": "便秘",
+      "aliases": ["排便困难", "大便干", "几天不大便"],
+      "category": "digestive",
+      "trimesters": ["early", "mid", "late"],
+      "trimesterNote": "整个孕期都常见，孕晚期子宫压迫直肠、补铁补钙时更明显。",
+      "overview": "孕激素让肠道蠕动变慢，铁剂、钙剂、活动减少也会加重。以饮食、饮水和活动调整为主，必要时用孕期可用的温和通便药。",
+      "methods": [
+        {
+          "id": "cs-fiber",
+          "name": "多吃膳食纤维",
+          "type": "diet",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "主食里加入燕麦、糙米、玉米、全麦面包等粗粮（约占主食的 1/3）；每天蔬菜 300–500g，水果 200–350g；火龙果、西梅、猕猴桃、梨都是常见的「通便水果」。",
+          "cautions": [
+            "增加纤维要同时多喝水，否则大便反而更干。",
+            "西梅、西梅汁效果明显但含糖不少，有妊娠期糖尿病时注意分量。"
+          ]
+        },
+        {
+          "id": "cs-water",
+          "name": "喝够水",
+          "type": "diet",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "孕期每天喝水约 1700–1900ml（约 8 杯），早上起床后空腹喝一杯温水，有助于刺激排便。",
+          "cautions": [
+            "有心脏、肾脏问题或医生要求限水的孕妈按医嘱。"
+          ]
+        },
+        {
+          "id": "cs-yogurt",
+          "name": "酸奶 / 益生菌食物",
+          "type": "diet",
+          "evidence": "experience",
+          "requiresDoctor": false,
+          "howTo": "每天一杯无糖或低糖酸奶，可以搭配燕麦或水果。",
+          "cautions": [
+            "选巴氏杀菌、正规品牌的产品，不喝自制或来源不明的生乳制品。"
+          ]
+        },
+        {
+          "id": "cs-habit",
+          "name": "定时排便、脚下垫小凳",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "每天固定时间（如早餐后）上厕所，有便意不要憋。坐马桶时脚下踩一个 15–20cm 的小凳子，让膝盖高于臀部，更符合排便角度。",
+          "cautions": [
+            "不要在马桶上玩手机久坐，也不要用力憋气使劲，容易诱发或加重痔疮。"
+          ]
+        },
+        {
+          "id": "cs-exercise",
+          "name": "每天适量活动",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "没有禁忌的孕妈每天散步 30 分钟左右，也可以做孕妇瑜伽、游泳等低强度运动。",
+          "cautions": [
+            "有先兆流产、前置胎盘、宫颈机能不全等情况，运动前先问医生。"
+          ]
+        },
+        {
+          "id": "cs-iron-review",
+          "name": "和医生沟通铁剂、钙剂",
+          "type": "lifestyle",
+          "evidence": "experience",
+          "requiresDoctor": false,
+          "howTo": "如果开始补铁后便秘明显加重，复诊时告诉医生，可以考虑调整剂型、剂量或服用时间，不要自己突然停药。",
+          "cautions": []
+        },
+        {
+          "id": "cs-laxatives",
+          "name": "孕期可用的温和通便药（乳果糖、聚乙二醇 4000、小麦纤维素等）",
+          "type": "medication",
+          "evidence": "guideline",
+          "requiresDoctor": true,
+          "rxLabel": "需遵医嘱",
+          "howTo": "饮食调整无效时，医生常会选择乳果糖口服液、聚乙二醇 4000 散或小麦纤维素颗粒。这类药主要在肠道内起作用、吸收很少，孕期相对安全。开塞露（甘油）可以偶尔临时使用。",
+          "cautions": [
+            "需遵医嘱。",
+            "避免刺激性泻药和成分不明的「排毒、清肠」产品：番泻叶、大黄、芦荟、酚酞（果导片）、蓖麻油等，部分可能刺激子宫收缩。",
+            "开塞露只适合偶尔应急，不要长期依赖。",
+            "很多通便茶、中成药含大黄等成分，购买前一定看成分并问药师。"
+          ]
+        }
+      ],
+      "whenToSeeDoctor": [
+        "超过 3–4 天不排便，并伴有腹胀、腹痛或呕吐",
+        "大便带血、黑便，或肛门剧烈疼痛",
+        "排便时用力后出现阴道流血、流液或规律宫缩",
+        "便秘与腹泻交替，或排便习惯突然明显改变",
+        "用了通便药仍然无效"
+      ]
+    },
+    {
+      "id": "insomnia",
+      "symptom": "失眠",
+      "aliases": ["睡不着", "睡不好", "夜醒", "多梦"],
+      "category": "sleep",
+      "trimesters": ["early", "mid", "late"],
+      "trimesterNote": "孕早期多是激素变化和尿频；孕晚期最常见，原因包括肚子大找不到舒服姿势、尿频、腿抽筋、胎动、烧心和对分娩的焦虑。",
+      "overview": "孕期睡眠变浅、夜里醒几次很常见。先找出影响睡眠的具体原因（尿频、烧心、抽筋等）对症处理，再配合规律作息。不建议自行吃安眠药。",
+      "methods": [
+        {
+          "id": "in-left-side",
+          "name": "侧卧 + 孕妇枕",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "孕中晚期以侧卧为主，左侧右侧交替都可以（左侧更推荐）。用 U 型或 C 型孕妇枕，或者在两膝之间夹一个枕头、肚子下面垫一个薄枕、背后靠一个枕头，减轻腰背和腹部的负担。",
+          "cautions": [
+            "孕晚期避免长时间仰卧，可能压迫下腔静脉，引起头晕、心慌和胎盘供血减少。半夜醒来发现自己仰着睡了也不用紧张，翻回侧卧即可。"
+          ]
+        },
+        {
+          "id": "in-routine",
+          "name": "规律作息与睡前放松",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "每天固定时间上床和起床；午睡控制在 1 小时以内；睡前 1 小时放下手机，可以泡脚（水温 40℃ 左右，10–15 分钟）、听轻音乐、做深呼吸或冥想。",
+          "cautions": [
+            "泡脚水不要太烫，时间不要太长；有静脉曲张或糖尿病的孕妈注意水温防烫伤。",
+            "躺下 20 分钟还睡不着，就起来做点安静的事，有困意再回床上。"
+          ]
+        },
+        {
+          "id": "in-diet",
+          "name": "晚餐与饮水调整",
+          "type": "diet",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "下午 2 点后不喝咖啡、浓茶、可乐；晚餐别太饱也别太油；睡前 1–2 小时减少喝水以减少夜尿。睡前有饥饿感可以喝一小杯温牛奶。",
+          "cautions": [
+            "白天要喝够水，只是把喝水时间往前挪，不是减少总量。"
+          ]
+        },
+        {
+          "id": "in-exercise",
+          "name": "白天适量运动、多晒太阳",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "白天散步、孕妇瑜伽或游泳，上午晒晒太阳，有助于调节生物钟。",
+          "cautions": [
+            "睡前 2–3 小时不要做剧烈运动。"
+          ]
+        },
+        {
+          "id": "in-mood",
+          "name": "说出焦虑",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "对分娩和育儿的担心，可以和伴侣、家人聊一聊，或者参加医院的孕妇学校。把担心的事情写下来，有助于睡前「清空大脑」。",
+          "cautions": []
+        },
+        {
+          "id": "in-medication",
+          "name": "药物助眠",
+          "type": "medication",
+          "evidence": "guideline",
+          "requiresDoctor": true,
+          "rxLabel": "需遵医嘱",
+          "howTo": "非药物方法无效、失眠严重影响白天生活时，可以就诊。医生会评估是否存在焦虑、抑郁或其他问题，必要时才会选用孕期相对安全的药物（如部分抗组胺药，多西拉敏就属于此类）。",
+          "cautions": [
+            "需遵医嘱。",
+            "不要自行服用安眠药、褪黑素、助眠保健品或成分不明的中药助眠产品。"
+          ]
+        }
+      ],
+      "whenToSeeDoctor": [
+        "连续 2 周以上严重失眠，白天精神很差、影响生活",
+        "情绪持续低落、兴趣减退、经常哭泣或焦虑恐慌",
+        "出现伤害自己或宝宝的想法——请立即寻求帮助",
+        "夜间打鼾严重、憋醒，或腿部不适必须不停活动才能缓解（不宁腿）",
+        "因瘙痒（尤其手心脚心）晚上睡不着——需要排查妊娠期肝内胆汁淤积症"
+      ]
+    },
+    {
+      "id": "leg-cramps",
+      "symptom": "腿抽筋",
+      "aliases": ["小腿抽筋", "肌肉痉挛", "夜间抽筋"],
+      "category": "musculoskeletal",
+      "trimesters": ["mid", "late"],
+      "trimesterNote": "多从孕中期开始，孕晚期加重，常在夜里或清晨发作。",
+      "overview": "原因还不完全明确，可能和腿部肌肉疲劳、血液循环变慢、钙镁等矿物质摄入不足有关。发作时拉伸最快，平时注意饮食补钙和睡前拉伸。",
+      "methods": [
+        {
+          "id": "lc-stretch-acute",
+          "name": "抽筋时立即拉伸",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "腿伸直，把脚尖朝自己的方向（往上、往膝盖方向）勾，同时用手或请家人轻轻推脚掌，保持 15–30 秒，直到抽筋缓解。也可以下床站起来，脚跟着地、在地上走几步。",
+          "cautions": [
+            "千万不要往下绷脚尖，会让抽筋更严重。",
+            "孕晚期起身时动作放慢，先侧身再坐起，防止跌倒。"
+          ]
+        },
+        {
+          "id": "lc-warm-massage",
+          "name": "热敷 + 按摩",
+          "type": "lifestyle",
+          "evidence": "experience",
+          "requiresDoctor": false,
+          "howTo": "抽筋缓解后，用温热毛巾敷小腿 10 分钟，再从脚踝往膝盖方向轻轻揉捏。",
+          "cautions": [
+            "如果小腿一侧持续肿痛、发红发热，不要按摩，需要排除血栓并及时就医。"
+          ]
+        },
+        {
+          "id": "lc-bedtime-stretch",
+          "name": "睡前拉伸小腿",
+          "type": "lifestyle",
+          "evidence": "experience",
+          "requiresDoctor": false,
+          "howTo": "面对墙站立，双手扶墙，一条腿向后迈，脚跟踩地、膝盖伸直，身体前倾，感觉小腿后侧被拉伸，保持 30 秒，每侧做 3 次。",
+          "cautions": []
+        },
+        {
+          "id": "lc-calcium-food",
+          "name": "饮食补钙补镁",
+          "type": "diet",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "孕中晚期每天喝奶 300–500ml（或等量酸奶、奶酪）；多吃豆腐等豆制品、深绿色蔬菜、坚果；每周吃 1–2 次虾皮、海带等。",
+          "cautions": []
+        },
+        {
+          "id": "lc-daily-habits",
+          "name": "白天避免久站久坐、注意腿部保暖",
+          "type": "lifestyle",
+          "evidence": "experience",
+          "requiresDoctor": false,
+          "howTo": "每坐 1 小时起来走动一下，坐着时可以转转脚踝；穿舒适平底鞋；晚上睡觉时腿部盖好被子，避免受凉。",
+          "cautions": []
+        },
+        {
+          "id": "lc-supplements",
+          "name": "钙剂 / 镁剂补充",
+          "type": "medication",
+          "evidence": "experience",
+          "requiresDoctor": true,
+          "rxLabel": "需遵医嘱",
+          "howTo": "饮食中奶制品不够或抽筋频繁时，医生可能会建议补充钙剂，有时也会考虑镁剂。",
+          "cautions": [
+            "需遵医嘱。",
+            "钙剂不要和铁剂同时吃，至少间隔 2 小时。",
+            "补钙不是越多越好，不要叠加吃多种含钙产品，以免便秘或增加结石风险。"
+          ]
+        }
+      ],
+      "whenToSeeDoctor": [
+        "抽筋非常频繁，或抽筋缓解后疼痛持续不消",
+        "一侧小腿肿胀、疼痛、发红发热（警惕下肢深静脉血栓，请尽快就医）",
+        "伴有腿部麻木、无力",
+        "伴有全身肌肉抽搐、头痛、视物模糊或血压升高"
+      ]
+    },
+    {
+      "id": "edema",
+      "symptom": "水肿",
+      "aliases": ["脚肿", "腿肿", "手肿", "浮肿"],
+      "category": "circulation",
+      "trimesters": ["mid", "late"],
+      "trimesterNote": "孕中期后逐渐出现，孕晚期最常见，下午和傍晚明显，睡一觉后减轻。",
+      "overview": "孕期血容量增加，子宫压迫下肢静脉，脚踝和小腿轻度水肿很常见（生理性水肿）。但如果脸、手突然肿起来，或伴血压升高、头痛，要警惕子痫前期。",
+      "methods": [
+        {
+          "id": "ed-elevate",
+          "name": "抬高双腿",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "坐着时把脚垫高放在小凳上；午休或晚上躺下时，用枕头把小腿垫高 15–20cm，每次 15–20 分钟。",
+          "cautions": []
+        },
+        {
+          "id": "ed-left-side",
+          "name": "侧卧休息，避免久站久坐",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "躺下时优先左侧卧，减轻子宫对下腔静脉的压迫，帮助血液回流。每坐或站 1 小时就活动一下，做踮脚、转脚踝等动作。",
+          "cautions": []
+        },
+        {
+          "id": "ed-low-salt",
+          "name": "清淡少盐，正常喝水",
+          "type": "diet",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "每天盐不超过 5g，少吃咸菜、腌制品、加工肉、方便面等高盐食物。保证足够的优质蛋白质（鱼、蛋、奶、瘦肉、豆制品）。",
+          "cautions": [
+            "水肿不是因为喝水多，不要刻意少喝水，喝水不足反而不利于身体排出多余水分。"
+          ]
+        },
+        {
+          "id": "ed-compression",
+          "name": "孕妇弹力袜",
+          "type": "lifestyle",
+          "evidence": "experience",
+          "requiresDoctor": false,
+          "howTo": "需要久站的孕妈可以穿医用孕妇弹力袜（一般选一级压力），早上起床前躺着穿上，晚上睡前脱下。",
+          "cautions": [
+            "压力等级和尺码按产品说明或医生建议选择，太紧反而影响血液循环。",
+            "穿着时感觉麻木、疼痛、皮肤发紫，立即脱下。"
+          ]
+        },
+        {
+          "id": "ed-exercise",
+          "name": "散步、游泳",
+          "type": "lifestyle",
+          "evidence": "experience",
+          "requiresDoctor": false,
+          "howTo": "每天散步 30 分钟，或在安全的环境下进行孕期游泳，水的压力有助于减轻下肢水肿。",
+          "cautions": [
+            "游泳选择卫生条件好的泳池，注意防滑。"
+          ]
+        },
+        {
+          "id": "ed-no-diuretics",
+          "name": "不要自行用利尿药或「消肿茶」",
+          "type": "medication",
+          "evidence": "guideline",
+          "requiresDoctor": true,
+          "rxLabel": "需遵医嘱",
+          "howTo": "生理性水肿一般不需要药物治疗。利尿药、消肿祛湿类中药茶会影响血容量，可能对胎盘供血不利，只有医生明确诊断后才会使用相关药物。",
+          "cautions": [
+            "需遵医嘱。"
+          ]
+        }
+      ],
+      "whenToSeeDoctor": [
+        "脸部、眼睑、手部突然明显肿胀",
+        "水肿伴头痛、视物模糊、眼前闪光、上腹痛或恶心呕吐（警惕子痫前期，请立即就医）",
+        "在家量血压高于 140/90mmHg",
+        "一周内体重增加超过 1kg 左右，且水肿明显加重",
+        "休息一夜后水肿仍不消退，或按压小腿后凹陷很久不回弹",
+        "只有一侧腿肿，伴疼痛、发红发热（警惕深静脉血栓）"
+      ]
+    },
+    {
+      "id": "back-pain",
+      "symptom": "腰背痛",
+      "aliases": ["腰酸", "腰痛", "背痛", "尾骨痛"],
+      "category": "musculoskeletal",
+      "trimesters": ["mid", "late"],
+      "trimesterNote": "孕中期开始增多，孕晚期最常见。",
+      "overview": "肚子变大后身体重心前移、腰椎前凸增加，加上松弛素让韧带变松，腰背肌肉负担变重。正确姿势、适度锻炼和托腹带能减轻大部分症状。",
+      "methods": [
+        {
+          "id": "bp-posture",
+          "name": "保持正确姿势",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "站立时收下巴、肩膀放松，骨盆稍微内收，不要刻意挺肚子。坐着时选有靠背的椅子，后腰垫一个小靠枕，双脚平放地面。捡东西时先屈膝下蹲，不要直接弯腰。",
+          "cautions": [
+            "不要提重物；避免长时间保持同一个姿势。"
+          ]
+        },
+        {
+          "id": "bp-shoes",
+          "name": "穿低跟舒适的鞋",
+          "type": "lifestyle",
+          "evidence": "experience",
+          "requiresDoctor": false,
+          "howTo": "选择 2–3cm 的低跟、防滑、有足弓支撑的鞋，避免高跟鞋和完全平底的薄底鞋。",
+          "cautions": []
+        },
+        {
+          "id": "bp-exercise",
+          "name": "孕妇瑜伽 / 猫牛式 / 骨盆摇摆",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "四点跪姿（双手双膝着地），吸气时塌腰抬头，呼气时拱背低头，缓慢重复 10 次；也可以靠墙站立，做骨盆前后小幅摇摆。每天练习 10–15 分钟，或参加专业孕妇瑜伽课。",
+          "cautions": [
+            "动作慢、幅度小，以不疼为原则；有任何不适立即停止。",
+            "有流产早产风险、前置胎盘等情况的孕妈，运动前先咨询医生。"
+          ]
+        },
+        {
+          "id": "bp-support-belt",
+          "name": "托腹带",
+          "type": "lifestyle",
+          "evidence": "experience",
+          "requiresDoctor": false,
+          "howTo": "孕中晚期需要长时间站立或走路时，可以使用托腹带托住腹部下方，减轻腰部负担。",
+          "cautions": [
+            "松紧以能插进一只手掌为宜，不要勒得太紧；躺下休息和睡觉时取下。"
+          ]
+        },
+        {
+          "id": "bp-warm-compress",
+          "name": "温热敷 + 轻柔按摩",
+          "type": "lifestyle",
+          "evidence": "experience",
+          "requiresDoctor": false,
+          "howTo": "用温热毛巾或热水袋（外裹毛巾）敷腰部 15 分钟；请家人用手掌轻柔按揉腰部两侧肌肉。",
+          "cautions": [
+            "温度以温热舒适为准，避免烫伤；不要热敷腹部。",
+            "不要去非专业场所按摩，避免按压腰骶部、脚踝内侧等传统认为孕期应避开的部位。"
+          ]
+        },
+        {
+          "id": "bp-side-sleep",
+          "name": "侧卧睡 + 夹腿枕",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "侧卧时两膝之间夹一个枕头，让骨盆保持水平；床垫软硬适中。起床时先侧身，用手撑起身体。",
+          "cautions": []
+        },
+        {
+          "id": "bp-pain-relief",
+          "name": "止痛药",
+          "type": "medication",
+          "evidence": "guideline",
+          "requiresDoctor": true,
+          "rxLabel": "需遵医嘱",
+          "howTo": "疼痛严重时，孕期一般首选对乙酰氨基酚，需要在医生指导下短期使用。",
+          "cautions": [
+            "需遵医嘱。",
+            "布洛芬、双氯芬酸、阿司匹林等非甾体抗炎药孕 20 周以后一般不建议使用，孕晚期尤其要避免，可能影响胎儿肾脏和心血管。",
+            "含麝香、红花等成分的膏药、活血类外用药孕期不宜使用。"
+          ]
+        }
+      ],
+      "whenToSeeDoctor": [
+        "腰背痛伴规律的下腹发紧、阵痛（可能是宫缩，孕 37 周前要警惕早产）",
+        "腰痛伴阴道流血、流液",
+        "腰痛伴发热、尿频尿痛、腰部一侧叩击痛（警惕肾盂肾炎）",
+        "腿部麻木无力、大小便失控",
+        "疼痛剧烈、突然加重，休息后不缓解"
+      ]
+    },
+    {
+      "id": "dizziness",
+      "symptom": "头晕",
+      "aliases": ["头昏", "眼前发黑", "站起来晕", "低血糖"],
+      "category": "circulation",
+      "trimesters": ["early", "mid", "late"],
+      "trimesterNote": "孕早中期较常见（血管扩张、血压偏低、孕吐吃得少）；孕晚期多与仰卧位低血压、贫血有关。",
+      "overview": "常见原因有体位变化太快、空腹低血糖、贫血、脱水、孕晚期仰卧压迫下腔静脉。头晕时第一时间坐下或躺下（侧卧），防止摔倒最重要。",
+      "methods": [
+        {
+          "id": "dz-sit-down",
+          "name": "头晕时立刻坐下或侧躺",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "一感觉头晕，马上原地坐下或扶着东西蹲下，可以把头放低；能躺下的话选择左侧卧。缓解后慢慢起身。",
+          "cautions": [
+            "头晕时不要强撑着走路、上下楼梯或开车。"
+          ]
+        },
+        {
+          "id": "dz-slow-change",
+          "name": "改变体位要慢",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "起床时先侧身，再用手撑起坐在床边，坐 1 分钟后再站起来；从蹲位、坐位站起时也要慢。",
+          "cautions": []
+        },
+        {
+          "id": "dz-avoid-supine",
+          "name": "孕晚期避免长时间平躺",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "孕晚期仰卧时子宫压迫下腔静脉，可能出现头晕、心慌、出冷汗（仰卧位低血压综合征）。出现时立刻改成左侧卧，一般几分钟内就能缓解。",
+          "cautions": []
+        },
+        {
+          "id": "dz-snacks",
+          "name": "少量多餐，随身带零食",
+          "type": "diet",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "避免长时间空腹，两餐之间加一次点心；包里常备全麦饼干、坚果、香蕉、小块面包等。怀疑低血糖（心慌、手抖、出冷汗）时，先吃几块饼干或喝几口含糖饮料，再吃正餐。",
+          "cautions": [
+            "有妊娠期糖尿病并在使用胰岛素的孕妈，低血糖处理按医生教的方法来，并在缓解后测血糖。"
+          ]
+        },
+        {
+          "id": "dz-hydration",
+          "name": "喝够水，避免闷热环境",
+          "type": "diet",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "少量多次喝水，夏天出汗多时可以适当补充电解质水。避免长时间待在拥挤、闷热的场所，泡澡和洗澡时间不要太长、水温不要过高。",
+          "cautions": []
+        },
+        {
+          "id": "dz-iron",
+          "name": "补铁预防贫血",
+          "type": "diet",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "孕中晚期每周吃 1–2 次动物血或动物肝脏（每次 20–50g），每天吃适量红肉；搭配富含维生素 C 的蔬果帮助铁吸收。",
+          "cautions": [
+            "饭后不要马上喝浓茶、咖啡，会影响铁吸收。"
+          ]
+        },
+        {
+          "id": "dz-iron-supplement",
+          "name": "铁剂",
+          "type": "medication",
+          "evidence": "guideline",
+          "requiresDoctor": true,
+          "rxLabel": "需遵医嘱",
+          "howTo": "产检发现贫血或铁储备低（血红蛋白、铁蛋白偏低）时，医生会开具铁剂，并定期复查。",
+          "cautions": [
+            "需遵医嘱。",
+            "铁剂和钙剂、抗酸药、牛奶、茶要错开 2 小时左右服用；可能引起便秘、黑便（服铁剂后大便发黑属常见现象）。"
+          ]
+        }
+      ],
+      "whenToSeeDoctor": [
+        "晕倒或差点晕倒",
+        "头晕伴剧烈头痛、视物模糊、眼前闪光（警惕子痫前期）",
+        "头晕伴心慌、胸痛、呼吸困难",
+        "头晕伴阴道流血或腹痛（孕早期要排除宫外孕）",
+        "说话不清、一侧肢体无力麻木",
+        "频繁头晕、脸色苍白、乏力明显（可能贫血）"
+      ]
+    },
+    {
+      "id": "headache",
+      "symptom": "头痛",
+      "aliases": ["头疼", "偏头痛"],
+      "category": "other",
+      "trimesters": ["early", "mid", "late"],
+      "trimesterNote": "孕早期常见（激素变化、睡眠不足、咖啡因减少）；孕 20 周后新出现的头痛要注意排查血压问题。",
+      "overview": "多数孕期头痛是紧张性头痛，休息、补水、规律饮食通常能缓解。孕中晚期的剧烈头痛一定要量血压。",
+      "methods": [
+        {
+          "id": "ha-rest",
+          "name": "休息、在安静昏暗的房间躺一会儿",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "关灯、拉窗帘，侧躺闭眼休息 20–30 分钟；保证每晚睡够 7–8 小时。",
+          "cautions": []
+        },
+        {
+          "id": "ha-compress",
+          "name": "冷敷或热敷",
+          "type": "lifestyle",
+          "evidence": "experience",
+          "requiresDoctor": false,
+          "howTo": "额头或太阳穴冷敷（毛巾包冰袋）10–15 分钟；颈肩僵硬引起的头痛，可以在颈后热敷，并轻轻按摩颈肩。",
+          "cautions": []
+        },
+        {
+          "id": "ha-eat-drink",
+          "name": "按时吃饭、喝够水",
+          "type": "diet",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "空腹和脱水都会诱发头痛，做到少量多餐，每天喝水 1700ml 左右。",
+          "cautions": [
+            "孕前习惯喝咖啡的孕妈，可以逐步减量而不是突然完全停掉，每天总量控制在 200mg 以内。"
+          ]
+        },
+        {
+          "id": "ha-bp-check",
+          "name": "测量血压",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "孕 20 周后出现头痛，在家先坐着休息 5 分钟后测血压并记录。",
+          "cautions": [
+            "收缩压 ≥140 或舒张压 ≥90mmHg，休息后复测仍高，应尽快就医。"
+          ]
+        },
+        {
+          "id": "ha-acetaminophen",
+          "name": "对乙酰氨基酚",
+          "type": "medication",
+          "evidence": "guideline",
+          "requiresDoctor": true,
+          "rxLabel": "需遵医嘱",
+          "howTo": "非药物方法无效时，对乙酰氨基酚是孕期相对首选的止痛药，应在医生指导下按最低有效剂量、短期使用。",
+          "cautions": [
+            "需遵医嘱。",
+            "注意很多感冒药也含对乙酰氨基酚，不要叠加服用。",
+            "避免自行服用布洛芬、阿司匹林（医生专门开具的小剂量阿司匹林除外）、含咖啡因的复方止痛片、麦角胺类偏头痛药。"
+          ]
+        }
+      ],
+      "whenToSeeDoctor": [
+        "孕 20 周后突然出现的剧烈头痛，或伴视物模糊、眼前闪光、上腹痛、手脸水肿（警惕子痫前期，请立即就医）",
+        "「一生中最痛」的突发头痛",
+        "头痛伴发热、脖子僵硬、呕吐",
+        "头痛伴说话不清、肢体无力、意识改变",
+        "头痛频繁、持续加重，或吃药后不缓解"
+      ]
+    },
+    {
+      "id": "fatigue",
+      "symptom": "疲劳 / 嗜睡",
+      "aliases": ["犯困", "没力气", "总想睡"],
+      "category": "sleep",
+      "trimesters": ["early", "late"],
+      "trimesterNote": "孕早期最明显（孕激素升高），孕中期多有好转，孕晚期因身体负担加重和睡眠质量差又会出现。",
+      "overview": "孕期疲劳是身体在努力「造人」的正常信号。允许自己多休息，同时排除贫血、甲状腺功能问题等。",
+      "methods": [
+        {
+          "id": "fa-rest",
+          "name": "能睡就睡，适当午休",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "晚上早点上床，中午小睡 30–60 分钟；把家务分给家人，降低对自己的要求。",
+          "cautions": []
+        },
+        {
+          "id": "fa-light-exercise",
+          "name": "轻度运动",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "每天散步 20–30 分钟，适度活动反而能提升精力。",
+          "cautions": [
+            "以能正常说话、不气喘吁吁为度。"
+          ]
+        },
+        {
+          "id": "fa-nutrition",
+          "name": "均衡饮食、补铁",
+          "type": "diet",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "每餐有主食、优质蛋白和蔬菜，适量吃红肉、动物血补铁；少吃高糖零食，避免血糖忽高忽低。",
+          "cautions": []
+        },
+        {
+          "id": "fa-checkup",
+          "name": "按时产检查血常规和甲功",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "疲劳特别明显时，复诊让医生看看血常规（贫血）和甲状腺功能结果。",
+          "cautions": []
+        }
+      ],
+      "whenToSeeDoctor": [
+        "疲劳伴脸色苍白、心慌、气短（可能贫血）",
+        "疲劳伴怕冷、明显体重增加或心跳加快、手抖（可能甲状腺问题）",
+        "持续情绪低落、对什么都提不起兴趣（警惕孕期抑郁）",
+        "伴有发热或其他感染症状"
+      ]
+    },
+    {
+      "id": "frequent-urination",
+      "symptom": "尿频",
+      "aliases": ["总想上厕所", "夜尿多", "漏尿"],
+      "category": "other",
+      "trimesters": ["early", "late"],
+      "trimesterNote": "孕早期子宫增大压迫膀胱、激素变化导致尿频；孕中期子宫升入腹腔后缓解；孕晚期胎头下降又会加重，可能伴咳嗽打喷嚏时漏尿。",
+      "overview": "生理性尿频不伴尿痛、发热。不要为了少跑厕所而少喝水，憋尿会增加尿路感染风险。",
+      "methods": [
+        {
+          "id": "fu-water-timing",
+          "name": "白天喝够、睡前少喝",
+          "type": "diet",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "把大部分饮水安排在白天，睡前 1–2 小时少喝水，少喝咖啡、浓茶等利尿饮品。",
+          "cautions": [
+            "总饮水量不能减少。"
+          ]
+        },
+        {
+          "id": "fu-no-hold",
+          "name": "有尿意就去，不要憋尿",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "排尿时身体稍微前倾，帮助膀胱排空。外出提前规划好洗手间位置。",
+          "cautions": []
+        },
+        {
+          "id": "fu-kegel",
+          "name": "凯格尔运动（盆底肌训练）",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "像憋住小便一样收紧盆底肌，保持 3–5 秒，再放松 3–5 秒，重复 10–15 次为一组，每天 3 组。熟练后可延长到收缩 10 秒。可改善漏尿，也有利于产后恢复。",
+          "cautions": [
+            "不要在排尿过程中反复中断尿流来练习，可能影响膀胱排空。",
+            "练习时腹部、臀部和大腿保持放松，正常呼吸，不要憋气。"
+          ]
+        },
+        {
+          "id": "fu-hygiene",
+          "name": "注意外阴清洁",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "穿透气的纯棉内裤，每天清水清洗外阴；如厕后从前往后擦。漏尿较多可以使用护垫并勤更换。",
+          "cautions": [
+            "不需要用洗液冲洗阴道内部。"
+          ]
+        }
+      ],
+      "whenToSeeDoctor": [
+        "排尿时疼痛、灼热，尿液浑浊、有异味或带血",
+        "尿频伴发热、腰痛",
+        "突然大量流出液体、无法控制，或持续少量流液（需要排除破水）",
+        "口渴明显、喝得多尿得多（需要排查血糖）"
+      ]
+    },
+    {
+      "id": "hemorrhoids",
+      "symptom": "痔疮",
+      "aliases": ["肛门疼", "大便出血", "肛门肿物"],
+      "category": "digestive",
+      "trimesters": ["mid", "late"],
+      "trimesterNote": "孕中晚期子宫压迫盆腔静脉、便秘加重，痔疮容易出现或复发，产后多数会好转。",
+      "overview": "预防便秘是关键。轻症以温水坐浴、保持清洁和外用药物为主。",
+      "methods": [
+        {
+          "id": "hm-prevent-constipation",
+          "name": "先解决便秘",
+          "type": "diet",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "参考「便秘」条目：多吃膳食纤维、多喝水、规律排便、排便时不久坐不用力。",
+          "cautions": []
+        },
+        {
+          "id": "hm-sitz-bath",
+          "name": "温水坐浴",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "便后用温水清洗肛门；每天 1–2 次用盆装温水（约 40℃）坐浴 10–15 分钟，可以缓解疼痛和肿胀。",
+          "cautions": [
+            "孕晚期坐浴注意防滑，坐稳后再坐下，起身慢一点。",
+            "不要在水里加高锰酸钾、中药等，除非医生开具。"
+          ]
+        },
+        {
+          "id": "hm-avoid-sitting",
+          "name": "避免久坐久站，侧卧休息",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "每坐 1 小时起来活动；休息时侧卧，减轻肛门部位的压力；配合凯格尔运动促进局部血液循环。",
+          "cautions": []
+        },
+        {
+          "id": "hm-topical",
+          "name": "外用痔疮药",
+          "type": "medication",
+          "evidence": "experience",
+          "requiresDoctor": true,
+          "rxLabel": "需遵医嘱",
+          "howTo": "疼痛、肿胀明显时，可以请医生开具孕期可用的痔疮膏或栓剂。",
+          "cautions": [
+            "需遵医嘱。",
+            "部分常见痔疮膏含麝香等成分，说明书注明孕妇慎用或禁用，购买前一定看说明书并咨询医生。"
+          ]
+        }
+      ],
+      "whenToSeeDoctor": [
+        "便血量多，或持续出血",
+        "肛门剧烈疼痛，摸到发紫变硬的肿块（可能是血栓性外痔）",
+        "痔核脱出后推不回去",
+        "大便发黑或伴有腹痛"
+      ]
+    },
+    {
+      "id": "nasal-congestion",
+      "symptom": "鼻塞 / 鼻出血",
+      "aliases": ["鼻子不通气", "流鼻血", "妊娠期鼻炎"],
+      "category": "other",
+      "trimesters": ["early", "mid", "late"],
+      "trimesterNote": "整个孕期都可能出现，孕晚期更常见，产后通常自行消失。",
+      "overview": "孕期激素和血容量增加使鼻黏膜充血肿胀，容易鼻塞、打鼾，也容易流鼻血。这叫「妊娠期鼻炎」，不是感冒。",
+      "methods": [
+        {
+          "id": "nc-saline",
+          "name": "生理盐水洗鼻 / 喷鼻",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "用生理盐水喷鼻剂或洗鼻器，每天 1–2 次清洗鼻腔，可以减轻鼻塞。",
+          "cautions": [
+            "使用无菌生理盐水或专用洗鼻盐配凉开水，不要直接用自来水。"
+          ]
+        },
+        {
+          "id": "nc-humidify",
+          "name": "保持空气湿润、垫高枕头",
+          "type": "lifestyle",
+          "evidence": "experience",
+          "requiresDoctor": false,
+          "howTo": "室内湿度保持在 50%–60%，可以用加湿器；睡觉时把上半身稍微垫高。洗热水澡时吸入蒸汽也能暂时缓解。",
+          "cautions": [
+            "加湿器每天换水、定期清洁，避免滋生细菌。"
+          ]
+        },
+        {
+          "id": "nc-nosebleed",
+          "name": "流鼻血时正确止血",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "坐下，身体稍向前倾，用拇指和食指捏住鼻翼两侧（鼻子软的部分）持续压 10–15 分钟，用嘴呼吸。可以在鼻梁和额头冷敷。",
+          "cautions": [
+            "不要仰头，血会流进喉咙引起呛咳或呕吐。",
+            "平时不要用力擤鼻涕、抠鼻子。"
+          ]
+        },
+        {
+          "id": "nc-decongestant",
+          "name": "减充血剂、抗过敏药",
+          "type": "medication",
+          "evidence": "guideline",
+          "requiresDoctor": true,
+          "rxLabel": "需遵医嘱",
+          "howTo": "严重影响睡眠时就医，由医生评估是否需要用药。",
+          "cautions": [
+            "需遵医嘱。",
+            "含伪麻黄碱的口服感冒药、鼻塞药孕期（特别是孕早期）不建议自行使用；羟甲唑啉等收缩血管的鼻喷剂不要自行连续使用，长期用会导致药物性鼻炎。"
+          ]
+        }
+      ],
+      "whenToSeeDoctor": [
+        "鼻出血压迫 20 分钟以上仍止不住，或频繁大量出血",
+        "鼻出血伴牙龈出血、皮肤瘀斑（需要查血小板和凝血功能）",
+        "伴发热、脓鼻涕、面部疼痛（可能鼻窦炎）",
+        "鼻出血伴头痛、血压升高",
+        "严重打鼾、睡眠中憋醒"
+      ]
+    },
+    {
+      "id": "gum-bleeding",
+      "symptom": "牙龈出血",
+      "aliases": ["刷牙出血", "妊娠期牙龈炎", "牙龈肿"],
+      "category": "other",
+      "trimesters": ["early", "mid", "late"],
+      "trimesterNote": "孕 2–3 个月开始出现，孕中晚期较明显。",
+      "overview": "激素变化让牙龈对牙菌斑更敏感，容易红肿出血。认真清洁口腔是最有效的办法，孕期也可以看牙医。",
+      "methods": [
+        {
+          "id": "gb-brushing",
+          "name": "软毛牙刷 + 巴氏刷牙法",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "早晚各刷一次，每次 2–3 分钟。牙刷毛与牙面成 45°，对准牙齿和牙龈交界处小幅度水平颤动，再往咬合面方向刷。每天用一次牙线清洁牙缝。",
+          "cautions": [
+            "刷牙出血不要因此不敢刷，清洁不到位出血会更严重。"
+          ]
+        },
+        {
+          "id": "gb-after-vomit",
+          "name": "孕吐后漱口",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "呕吐后先用清水漱口，等 30 分钟左右再刷牙，避免胃酸软化的牙釉质被刷掉。",
+          "cautions": []
+        },
+        {
+          "id": "gb-diet",
+          "name": "少吃甜食，补充维生素 C",
+          "type": "diet",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "减少含糖零食和饮料的频率，多吃新鲜蔬菜水果。",
+          "cautions": []
+        },
+        {
+          "id": "gb-dentist",
+          "name": "孕期口腔检查",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "最好孕前做口腔检查；孕期如有需要，孕中期（4–6 个月）是相对适合进行洁牙和一般牙科治疗的时间。就诊时告诉牙医自己怀孕了。",
+          "cautions": []
+        }
+      ],
+      "whenToSeeDoctor": [
+        "牙龈持续出血、肿痛明显，或长出容易出血的肿物（妊娠期龈瘤）",
+        "牙痛影响吃饭睡觉",
+        "伴全身皮肤瘀斑或其他部位出血"
+      ]
+    },
+    {
+      "id": "skin-itching",
+      "symptom": "皮肤瘙痒",
+      "aliases": ["痒", "手心脚心痒", "妊娠纹痒", "皮疹"],
+      "category": "other",
+      "trimesters": ["mid", "late"],
+      "trimesterNote": "孕中晚期常见，腹部皮肤被撑开时容易干痒。",
+      "overview": "多数瘙痒是皮肤干燥或妊娠纹引起的。但如果没有皮疹、以手心脚心为主、夜间加重，一定要查肝功能和血清总胆汁酸，排除妊娠期肝内胆汁淤积症（ICP），它可能影响宝宝安全。",
+      "methods": [
+        {
+          "id": "si-moisturize",
+          "name": "保湿",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "洗澡后 3 分钟内全身涂抹无香料的保湿乳或凡士林，腹部、大腿等干燥部位多涂。",
+          "cautions": []
+        },
+        {
+          "id": "si-bathing",
+          "name": "温水洗澡、穿棉质衣物",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "水温不要太高，洗澡时间 10–15 分钟；少用碱性强的香皂；穿宽松透气的纯棉衣服。",
+          "cautions": [
+            "尽量不要抓挠，可以用凉毛巾冷敷止痒。"
+          ]
+        },
+        {
+          "id": "si-calamine",
+          "name": "炉甘石洗剂等外用止痒药",
+          "type": "medication",
+          "evidence": "experience",
+          "requiresDoctor": true,
+          "rxLabel": "需遵医嘱",
+          "howTo": "局部瘙痒明显时，医生可能会建议外用炉甘石洗剂等温和止痒药。",
+          "cautions": [
+            "需遵医嘱。",
+            "激素类药膏需要在医生指导下使用，不要大面积、长期涂抹。",
+            "如果是 ICP 引起的瘙痒，外用药只能缓解症状，必须按医生要求治疗和复查。"
+          ]
+        }
+      ],
+      "whenToSeeDoctor": [
+        "手心、脚心明显瘙痒，夜间加重，皮肤上看不到皮疹——请尽快就医检查肝功能和胆汁酸（警惕 ICP）",
+        "瘙痒伴皮肤或眼白发黄、尿色变深",
+        "出现大片红疹、水疱，或从肚脐周围开始的风团样皮疹",
+        "瘙痒伴发热"
+      ]
+    },
+    {
+      "id": "pelvic-pain",
+      "symptom": "耻骨痛 / 骨盆痛",
+      "aliases": ["耻骨联合分离", "骨盆带疼痛", "腹股沟痛", "圆韧带痛"],
+      "category": "musculoskeletal",
+      "trimesters": ["mid", "late"],
+      "trimesterNote": "孕中期可能出现腹股沟一侧短暂抽痛（圆韧带牵拉），孕晚期常见耻骨处疼痛，翻身、上下楼、单腿站立时明显。",
+      "overview": "松弛素让骨盆关节和韧带变松，加上胎儿重量增加导致疼痛。目标是减少骨盆「不对称受力」的动作。",
+      "methods": [
+        {
+          "id": "pp-symmetry",
+          "name": "动作保持双腿对称",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "上下车时先坐下，双腿并拢一起转进 / 转出；翻身时双膝并拢一起翻；穿裤子坐着穿；上楼梯一次迈一个台阶，先迈不疼的腿。",
+          "cautions": [
+            "避免跷二郎腿、单腿站立、大步跨越和盘腿坐。"
+          ]
+        },
+        {
+          "id": "pp-belt",
+          "name": "骨盆带 / 托腹带",
+          "type": "lifestyle",
+          "evidence": "experience",
+          "requiresDoctor": false,
+          "howTo": "可以使用骨盆带固定骨盆，或用托腹带托住腹部，减轻负担。",
+          "cautions": [
+            "松紧适中，躺下休息时取下。"
+          ]
+        },
+        {
+          "id": "pp-round-ligament",
+          "name": "圆韧带痛：放慢动作",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "咳嗽、打喷嚏、突然起身时出现一侧腹股沟短暂刺痛，多是圆韧带被牵拉。可以在咳嗽打喷嚏前先屈膝弯腰，起身时动作放慢，疼痛时侧躺休息、局部温敷。",
+          "cautions": []
+        },
+        {
+          "id": "pp-pain-relief",
+          "name": "止痛与康复治疗",
+          "type": "medication",
+          "evidence": "guideline",
+          "requiresDoctor": true,
+          "rxLabel": "需遵医嘱",
+          "howTo": "疼痛严重影响走路时就医，医生可能会转介孕产康复科进行物理治疗，必要时短期使用对乙酰氨基酚。",
+          "cautions": [
+            "需遵医嘱。",
+            "不要自行使用非甾体抗炎药和活血类膏药。"
+          ]
+        }
+      ],
+      "whenToSeeDoctor": [
+        "疼痛严重到无法走路或翻身",
+        "腹痛持续不缓解，或伴规律宫缩",
+        "伴阴道流血、流液",
+        "伴发热或排尿疼痛"
+      ]
+    },
+    {
+      "id": "shortness-of-breath",
+      "symptom": "气短 / 胸闷",
+      "aliases": ["喘不上气", "呼吸困难", "胸口闷"],
+      "category": "circulation",
+      "trimesters": ["mid", "late"],
+      "trimesterNote": "孕中期开始因激素作用呼吸加深加快；孕晚期子宫上顶膈肌更明显，胎头入盆后（产前几周）通常会轻松一些。",
+      "overview": "轻度、活动后的气短很常见，休息后能缓解。休息时也喘、胸痛、心慌，需要就医。",
+      "methods": [
+        {
+          "id": "sb-posture",
+          "name": "挺直上身，给肺腾空间",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "坐着、站着时挺胸、肩膀向后打开；睡觉时用枕头把上半身垫高，侧卧。",
+          "cautions": []
+        },
+        {
+          "id": "sb-pace",
+          "name": "放慢节奏",
+          "type": "lifestyle",
+          "evidence": "guideline",
+          "requiresDoctor": false,
+          "howTo": "走路、上楼梯放慢速度，累了就停下休息；做几次缓慢的深呼吸：鼻子吸气 4 秒，嘴巴缓慢呼气 6 秒。",
+          "cautions": []
+        },
+        {
+          "id": "sb-ventilation",
+          "name": "保持通风，避免闷热",
+          "type": "lifestyle",
+          "evidence": "experience",
+          "requiresDoctor": false,
+          "howTo": "室内常开窗通风，避开人多拥挤的密闭空间。",
+          "cautions": []
+        }
+      ],
+      "whenToSeeDoctor": [
+        "休息时也明显气短，或突然加重",
+        "胸痛、咳血、心跳很快或心律不齐（警惕肺栓塞、心脏问题，请立即就医）",
+        "嘴唇或指甲发紫",
+        "气短伴一侧腿肿痛",
+        "气短伴脸色苍白、乏力（可能贫血）",
+        "气短伴发热、咳嗽"
+      ]
+    }
+  ]
+}
