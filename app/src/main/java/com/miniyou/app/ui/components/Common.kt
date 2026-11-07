@@ -235,6 +235,7 @@ fun minutesLabel(m: Int) = "%02d:%02d".format(m / 60, m % 60)
 @Composable
 fun rememberPhotoPicker(
     multiple: Boolean = false,
+    maxCount: Int = 5,
     title: String = "添加图片",
     onResult: (List<Uri>) -> Unit,
 ): () -> Unit {
@@ -247,7 +248,9 @@ fun rememberPhotoPicker(
         if (ok && p != null) callback(listOf(Uri.parse(p)))
     }
     val single = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let { callback(listOf(it)) } }
-    val multi = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(5)) { uris -> if (uris.isNotEmpty()) callback(uris) }
+    val multi = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(maxCount.coerceIn(2, 10))) { uris ->
+        if (uris.isNotEmpty()) callback(uris)
+    }
 
     if (show) {
         ModalBottomSheet(onDismissRequest = { show = false }) {
@@ -261,7 +264,7 @@ fun rememberPhotoPicker(
                         pending = uri.toString()
                         runCatching { camera.launch(uri) }
                     }
-                    SheetOption(Icons.Default.PhotoLibrary, if (multiple) "从相册选择（最多5张）" else "从相册选择", Modifier.weight(1f)) {
+                    SheetOption(Icons.Default.PhotoLibrary, if (multiple) "从相册选择（最多${maxCount}张）" else "从相册选择", Modifier.weight(1f)) {
                         show = false
                         val req = PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                         if (multiple) multi.launch(req) else single.launch(req)

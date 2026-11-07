@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -41,7 +43,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -72,6 +76,20 @@ import kotlinx.coroutines.launch
 
 val Channels = listOf("淘宝", "天猫", "京东", "拼多多", "抖音", "小红书", "母婴店", "超市", "亲友赠送")
 
+const val SHOPPING_AI_MAX_IMAGES = 8
+
+data class BatchLine(
+    val key: Int,
+    val name: String,
+    val category: String,
+    val status: Int,
+    val price: String,
+    val quantity: String,
+    val channel: String,
+    val note: String,
+    val photo: String?,
+)
+
 class ShoppingEditVM(private val app: MiniYouApp, private val id: Long, initialStatus: Int, autoAi: Boolean) : ViewModel() {
     var autoAiPending = autoAi
     var name by mutableStateOf("")
@@ -83,10 +101,11 @@ class ShoppingEditVM(private val app: MiniYouApp, private val id: Long, initialS
     var note by mutableStateOf("")
     var photo by mutableStateOf<String?>(null)
     private var existing: ShoppingItem? = null
-    val extraDrafts = mutableStateListOf<ShoppingDraft>()
-    private var aiPhoto: String? = null
+    val batch = mutableStateListOf<BatchLine>()
+    private var nextKey = 1
     var aiLoading by mutableStateOf(false)
     var aiError by mutableStateOf<String?>(null)
+    var batchSummary by mutableStateOf<String?>(null)
 
     init {
         if (id > 0) viewModelScope.launch {
@@ -109,13 +128,34 @@ class ShoppingEditVM(private val app: MiniYouApp, private val id: Long, initialS
                 val cats = app.db.shopping().categoriesOnce().map { it.name }
                 val drafts = app.ai.parseShopping(uris, cats)
                 if (drafts.isEmpty()) throw AiException("没有在图片中识别到商品")
-                apply(drafts.first())
-                extraDrafts.clear(); extraDrafts.addAll(drafts.drop(1))
-                aiPhoto = ImageStore.importImage(context, uris.first())
-                if (photo == null) photo = aiPhoto
+                val paths = uris.map { ImageStore.importImage(context, it) }
+                if (drafts.size == 1 && batch.isEmpty()) {
+                    apply(drafts.first())
+                    photo = paths.getOrNull(drafts.first().imageIndex - 1) ?: paths.firstOrNull()
+                    batchSummary = null
+                } else {
+                    batch.addAll(drafts.map { d ->
+                        BatchLine(
+                            key = nextKey++,
+                            name = d.name,
+                            category = d.category.ifBlank { category },
+                            status = d.status,
+                            price = d.price?.let(::fmt).orEmpty(),
+                            quantity = d.quantity.toString(),
+                            channel = d.channel,
+                            note = d.note,
+                            photo = paths.getOrNull(d.imageIndex - 1) ?: paths.firstOrNull(),
+                        )
+                    })
+                    batchSummary = "从 ${uris.size} 张图片里识别出 ${drafts.size} 件，可删改后再导入"
+                }
             } catch (e: AiException) { aiError = e.message } catch (e: Exception) { aiError = "识别失败：${e.message}" }
             finally { aiLoading = false }
         }
+    }
+
+    fun updateBatch(index: Int, line: BatchLine) {
+        if (index in batch.indices) batch[index] = line
     }
 
     private fun apply(d: ShoppingDraft) {
@@ -133,12 +173,27 @@ class ShoppingEditVM(private val app: MiniYouApp, private val id: Long, initialS
 
     suspend fun save() { app.db.shopping().upsert(current()) }
 
-    suspend fun saveAll() {
-        save()
-        app.db.shopping().insertAll(extraDrafts.map {
-            ShoppingItem(name = it.name, category = it.category, status = it.status, price = it.price, quantity = it.quantity,
-                channel = it.channel, note = it.note, photo = aiPhoto)
-        })
+    /** 把识别出的每一件作为独立记录导入，不改动正在编辑的原记录。 */
+    suspend fun importBatch() {
+        val now = System.currentTimeMillis()
+        val items = batch.mapNotNull { line ->
+            val title = line.name.trim()
+            if (title.isBlank()) return@mapNotNull null
+            ShoppingItem(
+                name = title,
+                category = line.category.ifBlank { "其他" },
+                status = line.status,
+                price = line.price.toDoubleOrNull(),
+                quantity = line.quantity.toIntOrNull()?.coerceAtLeast(1) ?: 1,
+                channel = line.channel.trim(),
+                note = line.note.trim(),
+                photo = line.photo,
+                createdAt = now,
+                updatedAt = now,
+            )
+        }
+        if (items.isEmpty()) throw AiException("没有可导入的商品")
+        app.db.shopping().insertAll(items)
     }
 
     suspend fun delete() { existing?.let { app.db.shopping().delete(it) } }
@@ -160,15 +215,27 @@ fun ShoppingEditScreen(id: Long, status: Int, autoAi: Boolean = false, onDone: (
     val layout = LocalWindowLayout.current
     var addCat by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
-    val aiPick = rememberPhotoPicker(title = "拍商品照片或选择订单截图") { vm.runAi(context, it) }
+    val aiPick = rememberPhotoPicker(
+        multiple = true,
+        maxCount = SHOPPING_AI_MAX_IMAGES,
+        title = "可多选，最多 $SHOPPING_AI_MAX_IMAGES 张。一张图里有多件也会逐条识别",
+    ) { vm.runAi(context, it) }
     val photoPick = rememberPhotoPicker(title = "商品图片") { it.firstOrNull()?.let { u -> vm.setPhoto(context, u) } }
     LaunchedEffect(Unit) { if (vm.autoAiPending) { vm.autoAiPending = false; aiPick() } }
-    val save: () -> Unit = { if (vm.name.isNotBlank()) scope.launch { vm.save(); onDone() } }
+    var categoryFor by remember { mutableStateOf<Int?>(null) }
+    val save: () -> Unit = {
+        scope.launch {
+            if (vm.batch.isNotEmpty()) vm.importBatch() else if (vm.name.isNotBlank()) vm.save() else return@launch
+            onDone()
+        }
+    }
 
     AppScaffold(topBar = {
         BackTopBar(if (id > 0) "编辑商品" else "添加商品", onDone) {
             if (id > 0) IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Outlined.Delete, "删除") }
-            TextButton(onClick = save, enabled = vm.name.isNotBlank()) { Text("保存") }
+            TextButton(onClick = save, enabled = vm.batch.isNotEmpty() || vm.name.isNotBlank()) {
+                Text(if (vm.batch.isNotEmpty()) "导入" else "保存")
+            }
         }
     }) { pad ->
         ContentWidth(maxWidth = 760.dp, modifier = Modifier.padding(pad)) {
@@ -176,17 +243,25 @@ fun ShoppingEditScreen(id: Long, status: Int, autoAi: Boolean = false, onDone: (
                 Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = layout.horizontalPadding, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                AiFillCard("AI 识图快速填写", "拍商品或订单截图，自动识别名称、价格、数量、渠道", onClick = aiPick)
-                if (vm.extraDrafts.isNotEmpty()) {
-                    SoftCard(color = MaterialTheme.colorScheme.tertiaryContainer) {
-                        Text("识别到 ${vm.extraDrafts.size + 1} 件商品", style = MaterialTheme.typography.titleSmall)
-                        Text("表单中是第 1 件，其余：" + vm.extraDrafts.joinToString("、") { it.name }, style = MaterialTheme.typography.bodySmall)
-                        Spacer(Modifier.height(8.dp))
-                        Button(onClick = { scope.launch { vm.saveAll(); onDone() } }, enabled = vm.name.isNotBlank()) {
-                            Text("一键保存全部 ${vm.extraDrafts.size + 1} 件")
-                        }
+                AiFillCard("AI 识图批量导入", "相册一次最多 $SHOPPING_AI_MAX_IMAGES 张。订单截图里的每件商品都会单独成为一条记录", onClick = aiPick)
+                if (vm.batch.isNotEmpty()) {
+                    vm.batchSummary?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    vm.batch.forEachIndexed { index, line ->
+                        BatchLineCard(
+                            line = line,
+                            onChange = { vm.updateBatch(index, it) },
+                            onPickCategory = { categoryFor = index },
+                            onRemove = { vm.batch.removeAt(index) },
+                        )
                     }
+                    Button(
+                        onClick = save,
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        shape = RoundedCornerShape(25.dp),
+                    ) { Text("导入全部 ${vm.batch.count { it.name.isNotBlank() }} 件") }
+                    TextButton(onClick = { vm.batch.clear(); vm.batchSummary = null }) { Text("清空识别结果，改为手动填写") }
                 }
+                if (vm.batch.isNotEmpty()) return@Column
                 OutlinedTextField(vm.name, { vm.name = it }, label = { Text("商品名称") }, singleLine = true,
                     modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp))
 
@@ -244,6 +319,76 @@ fun ShoppingEditScreen(id: Long, status: Int, autoAi: Boolean = false, onDone: (
     if (confirmDelete) ConfirmDialog("删除商品", "确定删除「${vm.name}」吗？", onDismiss = { confirmDelete = false }) {
         scope.launch { vm.delete(); onDone() }
     }
+    categoryFor?.let { index ->
+        val line = vm.batch.getOrNull(index)
+        if (line != null) {
+            AlertDialog(
+                onDismissRequest = { categoryFor = null },
+                title = { Text("选择分类") },
+                text = {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        categories.forEach { c ->
+                            FilterChip(
+                                selected = line.category == c.name,
+                                onClick = { vm.updateBatch(index, line.copy(category = c.name)); categoryFor = null },
+                                label = { Text("${categoryEmoji(c.name)} ${c.name}") },
+                            )
+                        }
+                    }
+                },
+                confirmButton = { TextButton(onClick = { categoryFor = null }) { Text("关闭") } },
+            )
+        }
+    }
     if (vm.aiLoading) AiProgressDialog("AI 正在识别商品…")
     vm.aiError?.let { MessageDialog("识别失败", it) { vm.aiError = null } }
+}
+
+@Composable
+private fun BatchLineCard(
+    line: BatchLine,
+    onChange: (BatchLine) -> Unit,
+    onPickCategory: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    SoftCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (line.photo != null) {
+                coil.compose.AsyncImage(
+                    java.io.File(line.photo), null, contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier.size(56.dp).clip(RoundedCornerShape(12.dp)),
+                )
+                Spacer(Modifier.width(10.dp))
+            }
+            Spacer(Modifier.weight(1f))
+            IconButton(onClick = onRemove) { Icon(Icons.Outlined.Delete, "移除") }
+        }
+        OutlinedTextField(line.name, { onChange(line.copy(name = it)) }, label = { Text("名称") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                line.price, { onChange(line.copy(price = it.filter { c -> c.isDigit() || c == '.' })) },
+                label = { Text("单价") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.weight(1f),
+            )
+            OutlinedTextField(
+                line.quantity, { onChange(line.copy(quantity = it.filter(Char::isDigit).take(4))) },
+                label = { Text("数量") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            ShoppingStatus.labels.forEachIndexed { i, label ->
+                FilterChip(selected = line.status == i, onClick = { onChange(line.copy(status = i)) }, label = { Text(label) })
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected = true, onClick = onPickCategory, label = { Text("${categoryEmoji(line.category)} ${line.category.ifBlank { "选分类" }}") })
+            if (line.channel.isNotBlank()) {
+                FilterChip(selected = false, onClick = {}, label = { Text(line.channel) })
+            }
+        }
+    }
 }

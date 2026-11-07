@@ -50,6 +50,9 @@ interface ShoppingDao {
     fun all(): Flow<List<ShoppingItem>>
 
     @Query("SELECT * FROM shopping WHERE id = :id")
+    fun observe(id: Long): Flow<ShoppingItem?>
+
+    @Query("SELECT * FROM shopping WHERE id = :id")
     suspend fun get(id: Long): ShoppingItem?
 
     @Upsert

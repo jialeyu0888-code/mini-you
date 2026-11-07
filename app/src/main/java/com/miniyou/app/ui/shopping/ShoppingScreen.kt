@@ -128,7 +128,7 @@ fun ShoppingScreen(nav: NavController) {
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
-                AiFillCard("AI 识图记一笔", "拍商品照片或选订单截图，自动识别名称、价格、数量和渠道") {
+                AiFillCard("AI 识图批量导入", "最多 8 张。一张订单截图里的多件商品会逐条导入") {
                     nav.navigate(Routes.shoppingEdit(status = tab, ai = true))
                 }
             }
@@ -156,7 +156,7 @@ fun ShoppingScreen(nav: NavController) {
                 }
             }
             items(shown, key = { it.id }) { item ->
-                ShoppingCard(item, onClick = { nav.navigate(Routes.shoppingEdit(item.id)) }) {
+                ShoppingCard(item, onClick = { nav.navigate(Routes.shoppingDetail(item.id)) }) {
                     scope.launch {
                         app.db.shopping().upsert(item.copy(status = (item.status + 1).coerceAtMost(2), updatedAt = System.currentTimeMillis()))
                     }

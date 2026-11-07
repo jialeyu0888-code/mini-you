@@ -39,6 +39,8 @@ data class ShoppingDraft(
     val quantity: Int,
     val channel: String,
     val note: String,
+    /** 商品主要出现在第几张图，从 1 开始 */
+    val imageIndex: Int = 1,
 )
 
 data class DiaryDraft(val mood: String, val tags: List<String>, val content: String)
@@ -57,8 +59,8 @@ class AiService(private val context: Context, private val settings: SettingsStor
 
     private val key get() = settings.current.effectiveApiKey
 
-    private suspend fun images(uris: List<Uri>, maxSide: Int = 2048): List<ByteArray> {
-        val list = uris.take(5).mapNotNull { ImageStore.loadJpeg(context, it, maxSide) }
+    private suspend fun images(uris: List<Uri>, maxSide: Int = 2048, limit: Int = 5): List<ByteArray> {
+        val list = uris.take(limit).mapNotNull { ImageStore.loadJpeg(context, it, maxSide) }
         if (list.isEmpty()) throw AiException("图片读取失败，请重新选择")
         return list
     }
@@ -121,11 +123,18 @@ class AiService(private val context: Context, private val settings: SettingsStor
     }
 
     suspend fun parseShopping(uris: List<Uri>, categories: List<String>): List<ShoppingDraft> {
+        val n = uris.size.coerceAtMost(8)
         val prompt = """
-            今天是 ${today()}。这是一张商品照片，或网购订单/购物小票截图，用于孕期与宝宝用品购物记录。请识别其中的商品，返回：
+            今天是 ${today()}。下面按顺序有 $n 张图片（第 1 张到第 $n 张），用于孕期与宝宝用品购物记录。
+            每张图都可能是：单件商品照片、包含多件商品的订单/购物车/小票截图，或同一订单的连续截图。
+            请把每一件商品都单独列出，一张图里有几件就列几件，不要合并成一条，也不要漏。
+            同一件商品如果出现在多张连续截图里（名称和价格都相同），只保留一条。
+            忽略运费、优惠券、红包、实付款合计等非商品行。
+            返回：
             {
               "items": [
                 {
+                  "image": 该商品主要出现在第几张图，从 1 开始的整数,
                   "name": "简洁的商品名（去掉营销词，保留品牌+品类+关键规格，如“贝亲 宽口径玻璃奶瓶 240ml”）",
                   "category": "从以下分类中选最合适的一个：${categories.joinToString("、")}",
                   "status": "bought（订单/小票/已付款截图）| decided（购物车、待付款）| planned（单纯的商品照片或种草）",
@@ -136,15 +145,17 @@ class AiService(private val context: Context, private val settings: SettingsStor
                 }
               ]
             }
-            订单里有多件商品时逐一列出；忽略运费、优惠券等非商品行。只输出 JSON。
+            只输出 JSON。
         """.trimIndent()
-        val o = ZhipuClient.visionJson(key, BASE_SYSTEM, prompt, images(uris))
+        val o = ZhipuClient.visionJson(key, BASE_SYSTEM, prompt, images(uris, maxSide = 1600, limit = 8))
         val items = o.optJSONArray("items").objects { it }.ifEmpty { listOf(o) }
         return items.map {
             val cat = it.s("category")
             ShoppingDraft(
                 name = it.s("name"),
-                category = categories.firstOrNull { c -> c == cat } ?: categories.firstOrNull { c -> cat.contains(c) || c.contains(cat) && cat.isNotBlank() } ?: categories.lastOrNull().orEmpty(),
+                category = categories.firstOrNull { c -> c == cat }
+                    ?: categories.firstOrNull { c -> cat.isNotBlank() && (cat.contains(c) || c.contains(cat)) }
+                    ?: categories.lastOrNull().orEmpty(),
                 status = when (it.s("status")) {
                     "bought" -> ShoppingStatus.BOUGHT
                     "decided" -> ShoppingStatus.DECIDED
@@ -154,6 +165,7 @@ class AiService(private val context: Context, private val settings: SettingsStor
                 quantity = it.num("quantity").toDoubleOrNull()?.toInt()?.coerceAtLeast(1) ?: 1,
                 channel = it.s("channel"),
                 note = it.s("note"),
+                imageIndex = it.num("image").toIntOrNull()?.coerceIn(1, n) ?: 1,
             )
         }.filter { it.name.isNotBlank() }
     }

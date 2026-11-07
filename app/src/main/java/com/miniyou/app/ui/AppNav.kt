@@ -62,6 +62,7 @@ import com.miniyou.app.ui.knowledge.MyRemedyEditScreen
 import com.miniyou.app.ui.knowledge.RemedyDetailScreen
 import com.miniyou.app.ui.onboarding.OnboardingScreen
 import com.miniyou.app.ui.settings.SettingsScreen
+import com.miniyou.app.ui.shopping.ShoppingDetailScreen
 import com.miniyou.app.ui.shopping.ShoppingEditScreen
 import com.miniyou.app.ui.shopping.ShoppingScreen
 import com.miniyou.app.ui.theme.LocalWindowLayout
@@ -80,6 +81,7 @@ object Routes {
     fun checkupEdit(id: Long = -1) = "checkup/edit?id=$id"
     fun checkupDetail(id: Long) = "checkup/$id"
     fun diaryEdit(id: Long = -1, date: Long = -1) = "diary/edit?id=$id&date=$date"
+    fun shoppingDetail(id: Long) = "shopping/view/$id"
     fun shoppingEdit(id: Long = -1, status: Int = 0, ai: Boolean = false) = "shopping/edit?id=$id&status=$status&ai=$ai"
     fun knowledge(tab: Int) = "knowledge?tab=$tab"
     fun bellyEdit(id: Long = -1) = "belly/edit?id=$id"
@@ -240,6 +242,9 @@ private fun AppNavHost(nav: NavHostController, modifier: Modifier) {
             ),
         ) { DiaryEditScreen(it.arguments?.getLong("id") ?: -1L, it.arguments?.getLong("date") ?: -1L, onDone = back) }
         composable(Routes.SHOPPING) { ShoppingScreen(nav) }
+        composable("shopping/view/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) {
+            ShoppingDetailScreen(it.arguments?.getLong("id") ?: -1L, nav)
+        }
         composable(
             "shopping/edit?id={id}&status={status}&ai={ai}",
             arguments = listOf(
