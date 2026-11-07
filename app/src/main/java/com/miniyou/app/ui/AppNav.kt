@@ -30,13 +30,14 @@ import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -44,6 +45,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.miniyou.app.ui.belly.BellyEditScreen
+import com.miniyou.app.ui.belly.BellyScreen
 import com.miniyou.app.ui.checkin.CheckinScreen
 import com.miniyou.app.ui.checkup.CheckupDetailScreen
 import com.miniyou.app.ui.checkup.CheckupEditScreen
@@ -55,6 +58,7 @@ import com.miniyou.app.ui.diary.DiaryScreen
 import com.miniyou.app.ui.home.HomeScreen
 import com.miniyou.app.ui.knowledge.KnowledgeScreen
 import com.miniyou.app.ui.knowledge.LessonDetailScreen
+import com.miniyou.app.ui.knowledge.MyRemedyEditScreen
 import com.miniyou.app.ui.knowledge.RemedyDetailScreen
 import com.miniyou.app.ui.onboarding.OnboardingScreen
 import com.miniyou.app.ui.settings.SettingsScreen
@@ -63,7 +67,6 @@ import com.miniyou.app.ui.shopping.ShoppingScreen
 import com.miniyou.app.ui.theme.LocalWindowLayout
 
 object Routes {
-    const val ONBOARDING = "onboarding"
     const val HOME = "home"
     const val CHECKUPS = "checkups"
     const val DIARY = "diary"
@@ -72,18 +75,49 @@ object Routes {
     const val SETTINGS = "settings"
     const val CHECKIN = "checkin"
     const val SCHEDULE = "schedule"
+    const val BELLY = "belly"
 
     fun checkupEdit(id: Long = -1) = "checkup/edit?id=$id"
     fun checkupDetail(id: Long) = "checkup/$id"
     fun diaryEdit(id: Long = -1, date: Long = -1) = "diary/edit?id=$id&date=$date"
-    fun shoppingEdit(id: Long = -1, status: Int = 0) = "shopping/edit?id=$id&status=$status"
+    fun shoppingEdit(id: Long = -1, status: Int = 0, ai: Boolean = false) = "shopping/edit?id=$id&status=$status&ai=$ai"
     fun knowledge(tab: Int) = "knowledge?tab=$tab"
+    fun bellyEdit(id: Long = -1) = "belly/edit?id=$id"
+    fun myRemedyEdit(id: Long = -1, remedyId: String = "") = "myremedy/edit?id=$id&remedy=$remedyId"
     fun remedy(id: String) = "remedy/$id"
     fun lesson(id: String) = "lesson/$id"
 }
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector, val selectedIcon: ImageVector) {
     fun matches(current: String) = current == route || current.startsWith("$route?")
+}
+
+private val tabRoutes = listOf(Routes.HOME, Routes.CHECKUPS, Routes.DIARY, Routes.SHOPPING, Routes.KNOWLEDGE)
+
+/**
+ * 切换底部/侧边导航的一级页面。
+ * 首页是返回栈的根：回首页时直接弹出其上的页面（保存它们的状态以便再次切回），
+ * 而不是 navigate + restoreState——否则非 tab 方式压在首页上的页面会被当成首页的状态恢复回来。
+ */
+fun NavController.switchTab(route: String) {
+    val base = route.substringBefore('?')
+    if (base == Routes.HOME) {
+        if (!popBackStack(Routes.HOME, inclusive = false, saveState = true)) {
+            navigate(Routes.HOME) { popUpTo(graph.id) { inclusive = true } }
+        }
+        return
+    }
+    val explicitArgs = route.contains('?')
+    navigate(route) {
+        popUpTo(Routes.HOME) { saveState = !explicitArgs }
+        launchSingleTop = true
+        restoreState = !explicitArgs
+    }
+}
+
+/** 首页等处的入口：一级页面按 tab 切换，其余页面正常压栈。 */
+fun NavController.open(route: String) {
+    if (route.substringBefore('?') in tabRoutes) switchTab(route) else navigate(route)
 }
 
 private val tabs = listOf(
@@ -120,22 +154,18 @@ fun AppScaffold(
 
 @Composable
 fun AppNav() {
+    val settings by app().settings.state.collectAsState()
+    if (!settings.onboarded) {
+        OnboardingScreen(onDone = {})
+        return
+    }
     val nav = rememberNavController()
-    val settings = app().settings
     val layout = LocalWindowLayout.current
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route.orEmpty()
     val topLevel = tabs.any { it.matches(route) }
-    val showRail = layout.expanded && route != Routes.ONBOARDING && route.isNotEmpty()
+    val showRail = layout.expanded && route.isNotEmpty()
     val showBottom = !layout.expanded && topLevel
-
-    fun go(tab: Tab) {
-        nav.navigate(tab.route) {
-            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-            launchSingleTop = true
-            restoreState = true
-        }
-    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -146,7 +176,7 @@ fun AppNav() {
                         val selected = tab.matches(route)
                         NavigationBarItem(
                             selected = selected,
-                            onClick = { go(tab) },
+                            onClick = { nav.switchTab(tab.route) },
                             icon = { Icon(if (selected) tab.selectedIcon else tab.icon, null) },
                             label = { Text(tab.label) },
                             colors = NavigationBarItemDefaults.colors(indicatorColor = MaterialTheme.colorScheme.primaryContainer),
@@ -161,7 +191,7 @@ fun AppNav() {
                 NavigationRail(containerColor = MaterialTheme.colorScheme.surface) {
                     Spacer(Modifier.height(12.dp))
                     FloatingActionButton(
-                        onClick = { nav.navigate(Routes.CHECKIN) },
+                        onClick = { nav.navigate(Routes.CHECKIN) { launchSingleTop = true } },
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                     ) { Text("✅") }
                     Spacer(Modifier.height(20.dp))
@@ -170,7 +200,7 @@ fun AppNav() {
                             val selected = tab.matches(route)
                             NavigationRailItem(
                                 selected = selected,
-                                onClick = { go(tab) },
+                                onClick = { nav.switchTab(tab.route) },
                                 icon = { Icon(if (selected) tab.selectedIcon else tab.icon, null) },
                                 label = { Text(tab.label) },
                                 colors = NavigationRailItemDefaults.colors(indicatorColor = MaterialTheme.colorScheme.primaryContainer),
@@ -181,21 +211,16 @@ fun AppNav() {
                 }
             }
             CompositionLocalProvider(LocalBottomBarShown provides showBottom) {
-                AppNavHost(nav, if (settings.current.onboarded) Routes.HOME else Routes.ONBOARDING, Modifier.weight(1f))
+                AppNavHost(nav, Modifier.weight(1f))
             }
         }
     }
 }
 
 @Composable
-private fun AppNavHost(nav: NavHostController, start: String, modifier: Modifier) {
+private fun AppNavHost(nav: NavHostController, modifier: Modifier) {
     val back: () -> Unit = { nav.popBackStack() }
-    NavHost(nav, startDestination = start, modifier = modifier) {
-        composable(Routes.ONBOARDING) {
-            OnboardingScreen(onDone = {
-                nav.navigate(Routes.HOME) { popUpTo(Routes.ONBOARDING) { inclusive = true } }
-            })
-        }
+    NavHost(nav, startDestination = Routes.HOME, modifier = modifier) {
         composable(Routes.HOME) { HomeScreen(nav) }
         composable(Routes.CHECKUPS) { CheckupListScreen(nav) }
         composable(
@@ -216,18 +241,36 @@ private fun AppNavHost(nav: NavHostController, start: String, modifier: Modifier
         ) { DiaryEditScreen(it.arguments?.getLong("id") ?: -1L, it.arguments?.getLong("date") ?: -1L, onDone = back) }
         composable(Routes.SHOPPING) { ShoppingScreen(nav) }
         composable(
-            "shopping/edit?id={id}&status={status}",
+            "shopping/edit?id={id}&status={status}&ai={ai}",
             arguments = listOf(
                 navArgument("id") { type = NavType.LongType; defaultValue = -1L },
                 navArgument("status") { type = NavType.IntType; defaultValue = 0 },
+                navArgument("ai") { type = NavType.BoolType; defaultValue = false },
             ),
-        ) { ShoppingEditScreen(it.arguments?.getLong("id") ?: -1L, it.arguments?.getInt("status") ?: 0, onDone = back) }
+        ) {
+            ShoppingEditScreen(
+                it.arguments?.getLong("id") ?: -1L, it.arguments?.getInt("status") ?: 0,
+                autoAi = it.arguments?.getBoolean("ai") ?: false, onDone = back,
+            )
+        }
+        composable(Routes.BELLY) { BellyScreen(nav) }
+        composable(
+            "belly/edit?id={id}",
+            arguments = listOf(navArgument("id") { type = NavType.LongType; defaultValue = -1L }),
+        ) { BellyEditScreen(it.arguments?.getLong("id") ?: -1L, onDone = back) }
+        composable(
+            "myremedy/edit?id={id}&remedy={remedy}",
+            arguments = listOf(
+                navArgument("id") { type = NavType.LongType; defaultValue = -1L },
+                navArgument("remedy") { type = NavType.StringType; defaultValue = "" },
+            ),
+        ) { MyRemedyEditScreen(it.arguments?.getLong("id") ?: -1L, it.arguments?.getString("remedy").orEmpty(), onDone = back) }
         composable(Routes.CHECKIN) { CheckinScreen(onBack = back) }
         composable(
             "knowledge?tab={tab}",
             arguments = listOf(navArgument("tab") { type = NavType.IntType; defaultValue = 0 }),
         ) { KnowledgeScreen(nav, it.arguments?.getInt("tab") ?: 0) }
-        composable("remedy/{id}") { RemedyDetailScreen(it.arguments?.getString("id").orEmpty(), onBack = back) }
+        composable("remedy/{id}") { RemedyDetailScreen(it.arguments?.getString("id").orEmpty(), nav, onBack = back) }
         composable("lesson/{id}") { LessonDetailScreen(it.arguments?.getString("id").orEmpty(), onBack = back) }
         composable(Routes.SETTINGS) { SettingsScreen(onBack = back) }
     }

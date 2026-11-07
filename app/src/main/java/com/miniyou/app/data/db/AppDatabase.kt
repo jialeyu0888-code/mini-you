@@ -6,6 +6,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -48,13 +50,23 @@ class Converters {
     }
 }
 
+private val MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS `belly_photos` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `date` INTEGER NOT NULL, `week` TEXT NOT NULL, `photo` TEXT NOT NULL, `note` TEXT NOT NULL, `createdAt` INTEGER NOT NULL)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_belly_photos_date` ON `belly_photos` (`date`)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS `my_remedies` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `symptom` TEXT NOT NULL, `remedyId` TEXT NOT NULL, `title` TEXT NOT NULL, `content` TEXT NOT NULL, `rating` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_my_remedies_remedyId` ON `my_remedies` (`remedyId`)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS `favorite_methods` (`methodId` TEXT NOT NULL, `remedyId` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`methodId`))")
+    }
+}
+
 @Database(
     entities = [
         Checkup::class, DiaryEntry::class, ShoppingItem::class, ShoppingCategory::class,
-        CheckinItem::class, CheckinRecord::class,
+        CheckinItem::class, CheckinRecord::class, BellyPhoto::class, MyRemedy::class, FavoriteMethod::class,
     ],
-    version = 1,
-    exportSchema = false,
+    version = 2,
+    exportSchema = true,
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -62,9 +74,13 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun diary(): DiaryDao
     abstract fun shopping(): ShoppingDao
     abstract fun checkin(): CheckinDao
+    abstract fun belly(): BellyDao
+    abstract fun myRemedies(): MyRemedyDao
 
     companion object {
         fun create(context: Context): AppDatabase =
-            Room.databaseBuilder(context, AppDatabase::class.java, "miniyou.db").build()
+            Room.databaseBuilder(context, AppDatabase::class.java, "miniyou.db")
+                .addMigrations(MIGRATION_1_2)
+                .build()
     }
 }

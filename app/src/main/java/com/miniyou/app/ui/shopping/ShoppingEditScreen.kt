@@ -33,6 +33,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -71,7 +72,8 @@ import kotlinx.coroutines.launch
 
 val Channels = listOf("淘宝", "天猫", "京东", "拼多多", "抖音", "小红书", "母婴店", "超市", "亲友赠送")
 
-class ShoppingEditVM(private val app: MiniYouApp, private val id: Long, initialStatus: Int) : ViewModel() {
+class ShoppingEditVM(private val app: MiniYouApp, private val id: Long, initialStatus: Int, autoAi: Boolean) : ViewModel() {
+    var autoAiPending = autoAi
     var name by mutableStateOf("")
     var status by mutableStateOf(initialStatus)
     var category by mutableStateOf("待产包")
@@ -149,10 +151,10 @@ class ShoppingEditVM(private val app: MiniYouApp, private val id: Long, initialS
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ShoppingEditScreen(id: Long, status: Int, onDone: () -> Unit) {
+fun ShoppingEditScreen(id: Long, status: Int, autoAi: Boolean = false, onDone: () -> Unit) {
     val app = app()
     val context = LocalContext.current
-    val vm = viewModel(key = "shop-$id-$status") { ShoppingEditVM(app, id, status) }
+    val vm = viewModel(key = "shop-$id-$status-$autoAi") { ShoppingEditVM(app, id, status, autoAi) }
     val categories by app.db.shopping().categories().collectAsState(initial = emptyList())
     val scope = rememberCoroutineScope()
     val layout = LocalWindowLayout.current
@@ -160,6 +162,7 @@ fun ShoppingEditScreen(id: Long, status: Int, onDone: () -> Unit) {
     var confirmDelete by remember { mutableStateOf(false) }
     val aiPick = rememberPhotoPicker(title = "拍商品照片或选择订单截图") { vm.runAi(context, it) }
     val photoPick = rememberPhotoPicker(title = "商品图片") { it.firstOrNull()?.let { u -> vm.setPhoto(context, u) } }
+    LaunchedEffect(Unit) { if (vm.autoAiPending) { vm.autoAiPending = false; aiPick() } }
     val save: () -> Unit = { if (vm.name.isNotBlank()) scope.launch { vm.save(); onDone() } }
 
     AppScaffold(topBar = {

@@ -75,6 +75,45 @@ interface ShoppingDao {
 }
 
 @Dao
+interface BellyDao {
+    @Query("SELECT * FROM belly_photos ORDER BY date DESC, id DESC")
+    fun all(): Flow<List<BellyPhoto>>
+
+    @Query("SELECT * FROM belly_photos WHERE id = :id")
+    suspend fun get(id: Long): BellyPhoto?
+
+    @Upsert
+    suspend fun upsert(item: BellyPhoto): Long
+
+    @Delete
+    suspend fun delete(item: BellyPhoto)
+}
+
+@Dao
+interface MyRemedyDao {
+    @Query("SELECT * FROM my_remedies ORDER BY updatedAt DESC")
+    fun all(): Flow<List<MyRemedy>>
+
+    @Query("SELECT * FROM my_remedies WHERE id = :id")
+    suspend fun get(id: Long): MyRemedy?
+
+    @Upsert
+    suspend fun upsert(item: MyRemedy): Long
+
+    @Delete
+    suspend fun delete(item: MyRemedy)
+
+    @Query("SELECT * FROM favorite_methods ORDER BY createdAt DESC")
+    fun favorites(): Flow<List<FavoriteMethod>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun addFavorite(item: FavoriteMethod)
+
+    @Query("DELETE FROM favorite_methods WHERE methodId = :methodId")
+    suspend fun removeFavorite(methodId: String)
+}
+
+@Dao
 interface CheckinDao {
     @Query("SELECT * FROM checkin_items ORDER BY sortOrder, id")
     fun items(): Flow<List<CheckinItem>>

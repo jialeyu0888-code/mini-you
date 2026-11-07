@@ -61,6 +61,7 @@ import com.miniyou.app.data.db.ShoppingItem
 import com.miniyou.app.data.db.ShoppingStatus
 import com.miniyou.app.ui.AppScaffold
 import com.miniyou.app.ui.Routes
+import com.miniyou.app.ui.components.AiFillCard
 import com.miniyou.app.ui.components.EmptyState
 import com.miniyou.app.ui.components.MainTopBar
 import com.miniyou.app.ui.components.Pill
@@ -124,6 +125,11 @@ fun ShoppingScreen(nav: NavController) {
                         Stat("待购预算", money(budget), Modifier.weight(1f))
                         Stat("已买 / 全部", "${items.count { it.status == ShoppingStatus.BOUGHT }} / ${items.size}", Modifier.weight(1f))
                     }
+                }
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                AiFillCard("AI 识图记一笔", "拍商品照片或选订单截图，自动识别名称、价格、数量和渠道") {
+                    nav.navigate(Routes.shoppingEdit(status = tab, ai = true))
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {

@@ -26,7 +26,16 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.navigation.NavController
+import com.miniyou.app.data.db.FavoriteMethod
+import com.miniyou.app.ui.Routes
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -107,17 +116,23 @@ fun DisclaimerFooter(text: String) {
 }
 
 @Composable
-fun RemedyDetailScreen(id: String, onBack: () -> Unit) {
+fun RemedyDetailScreen(id: String, nav: NavController, onBack: () -> Unit) {
     val content = app().content.remedies
     val r = content.remedies.firstOrNull { it.id == id }
     AppScaffold(topBar = { BackTopBar(r?.symptom ?: "缓解攻略", onBack) }) { pad ->
-        if (r != null) ContentWidth(modifier = Modifier.padding(pad)) { RemedyDetailContent(r, content, showTitle = false) }
+        if (r != null) ContentWidth(modifier = Modifier.padding(pad)) { RemedyDetailContent(r, content, nav, showTitle = false) }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun RemedyDetailContent(r: Remedy, content: RemedyContent, showTitle: Boolean = true) {
+fun RemedyDetailContent(r: Remedy, content: RemedyContent, nav: NavController, showTitle: Boolean = true) {
+    val app = app()
+    val scope = rememberCoroutineScope()
+    val mine by app.db.myRemedies().all().collectAsState(initial = emptyList())
+    val favorites by app.db.myRemedies().favorites().collectAsState(initial = emptyList())
+    val favIds = remember(favorites) { favorites.map { it.methodId }.toSet() }
+    val myForThis = mine.filter { it.remedyId == r.id }
     Column(
         Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -133,6 +148,26 @@ fun RemedyDetailContent(r: Remedy, content: RemedyContent, showTitle: Boolean = 
             if (r.trimesterNote.isNotBlank()) {
                 Spacer(Modifier.height(8.dp))
                 Text("🕒 ${r.trimesterNote}", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+
+        SectionTitle("💗 对我有效的方法（${myForThis.size + r.methods.count { it.id in favIds }}）")
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0F6)),
+            border = BorderStroke(1.dp, Color(0xFFF5C2D7)),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (myForThis.isEmpty() && favIds.none { id -> r.methods.any { it.id == id } }) {
+                    Text("每个孕妈都不一样。试过有用的方法，点下方方法卡片上的 ♡ 标记，或者记下你自己的小妙招。",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                r.methods.filter { it.id in favIds }.forEach { m ->
+                    Text("♥ ${m.name}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                }
+                myForThis.forEach { MyRemedyCard(it) { nav.navigate(Routes.myRemedyEdit(it.id)) } }
+                OutlinedButton(onClick = { nav.navigate(Routes.myRemedyEdit(remedyId = r.id)) }) { Text("✍️ 记录我自己的方法") }
             }
         }
 
@@ -154,7 +189,14 @@ fun RemedyDetailContent(r: Remedy, content: RemedyContent, showTitle: Boolean = 
                     }
                 }
             }
-            list.forEach { MethodCard(it, content) }
+            list.forEach { m ->
+                MethodCard(m, content, m.id in favIds) {
+                    scope.launch {
+                        if (m.id in favIds) app.db.myRemedies().removeFavorite(m.id)
+                        else app.db.myRemedies().addFavorite(FavoriteMethod(m.id, r.id))
+                    }
+                }
+            }
         }
 
         WarningCard("🏥 出现这些情况请及时就医", r.whenToSeeDoctor)
@@ -172,7 +214,7 @@ private fun typeEmoji(type: String) = when (type) {
 }
 
 @Composable
-private fun MethodCard(m: RemedyMethod, content: RemedyContent) {
+private fun MethodCard(m: RemedyMethod, content: RemedyContent, favorite: Boolean, onToggleFavorite: () -> Unit) {
     val rx = m.isMedication
     Card(
         shape = RoundedCornerShape(20.dp),
@@ -195,6 +237,15 @@ private fun MethodCard(m: RemedyMethod, content: RemedyContent) {
             }
             Spacer(Modifier.height(6.dp))
             Text(m.howTo, style = MaterialTheme.typography.bodyMedium)
+            Spacer(Modifier.height(6.dp))
+            Surface(
+                onClick = onToggleFavorite, shape = RoundedCornerShape(50),
+                color = if (favorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+            ) {
+                Text(if (favorite) "♥ 对我有效" else "♡ 对我有效？", fontSize = 13.sp,
+                    color = if (favorite) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp))
+            }
             if (m.cautions.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 Surface(color = if (rx) WarnContainer else MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(12.dp)) {

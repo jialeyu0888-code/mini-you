@@ -93,6 +93,44 @@ data class CheckinItem(
     val sortOrder: Int = 0,
 )
 
+/** 孕肚纪念照。 */
+@Entity(tableName = "belly_photos", indices = [Index("date")])
+data class BellyPhoto(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val date: Long,
+    /** 例如 "20+3" */
+    val week: String = "",
+    val photo: String,
+    val note: String = "",
+    val createdAt: Long = System.currentTimeMillis(),
+)
+
+object MyRemedyRating {
+    val labels = listOf("有点用", "有效", "非常有效")
+}
+
+/** 孕妈自己记录的有效缓解方法。remedyId 对应内置症状 id，自定义症状时为空。 */
+@Entity(tableName = "my_remedies", indices = [Index("remedyId")])
+data class MyRemedy(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val symptom: String,
+    val remedyId: String = "",
+    val title: String,
+    val content: String = "",
+    /** 0..2，见 [MyRemedyRating] */
+    val rating: Int = 1,
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis(),
+)
+
+/** 内置攻略中被标记为「对我有效」的方法。 */
+@Entity(tableName = "favorite_methods")
+data class FavoriteMethod(
+    @PrimaryKey val methodId: String,
+    val remedyId: String,
+    val createdAt: Long = System.currentTimeMillis(),
+)
+
 @Entity(tableName = "checkin_records", primaryKeys = ["itemId", "date"], indices = [Index("date")])
 data class CheckinRecord(
     val itemId: Long,

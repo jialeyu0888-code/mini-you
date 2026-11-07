@@ -21,9 +21,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -61,6 +63,12 @@ import com.miniyou.app.ui.components.SoftCard
 import com.miniyou.app.ui.components.app
 import com.miniyou.app.ui.theme.LocalWindowLayout
 
+object KnowledgeTab {
+    const val REMEDIES = 0
+    const val MINE = 1
+    const val CLASSES = 2
+}
+
 @Composable
 fun KnowledgeScreen(nav: NavController, initialTab: Int) {
     val app = app()
@@ -74,31 +82,55 @@ fun KnowledgeScreen(nav: NavController, initialTab: Int) {
     val classes = app.content.classes
     val trimester = settings.lmp?.let { PregnancyInfo(it).trimesterId }
 
-    AppScaffold(topBar = { MainTopBar("孕育百科", if (tab == 0) remedies.title else classes.title) }) { pad ->
+    val subtitle = when (tab) {
+        KnowledgeTab.REMEDIES -> remedies.title
+        KnowledgeTab.MINE -> "每个孕妈都不一样，记下真正对你有效的方法"
+        else -> classes.title
+    }
+    AppScaffold(
+        topBar = { MainTopBar("孕育百科", subtitle) },
+        floatingActionButton = {
+            if (tab == KnowledgeTab.MINE) {
+                ExtendedFloatingActionButton(onClick = { nav.navigate(Routes.myRemedyEdit()) },
+                    icon = { Icon(Icons.Default.Add, null) }, text = { Text("记录我的方法") })
+            }
+        },
+    ) { pad ->
         Column(Modifier.padding(pad)) {
             PrimaryTabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.background) {
-                Tab(tab == 0, { tab = 0; query = "" }, text = { Text("🌿 缓解攻略") })
-                Tab(tab == 1, { tab = 1; query = "" }, text = { Text("👶 准爸妈课堂") })
+                Tab(tab == KnowledgeTab.REMEDIES, { tab = KnowledgeTab.REMEDIES; query = "" }, text = { Text("🌿 缓解攻略") })
+                Tab(tab == KnowledgeTab.MINE, { tab = KnowledgeTab.MINE; query = "" }, text = { Text("💗 我的攻略") })
+                Tab(tab == KnowledgeTab.CLASSES, { tab = KnowledgeTab.CLASSES; query = "" }, text = { Text("👶 准爸妈课堂") })
             }
             OutlinedTextField(
                 query, { query = it }, singleLine = true,
-                placeholder = { Text(if (tab == 0) "搜索症状，如 孕吐、腿抽筋、失眠" else "搜索课程，如 洗澡、拍嗝、黄疸") },
+                placeholder = {
+                    Text(
+                        when (tab) {
+                            KnowledgeTab.REMEDIES -> "搜索症状，如 孕吐、腿抽筋、失眠"
+                            KnowledgeTab.MINE -> "搜索我记录的方法"
+                            else -> "搜索课程，如 洗澡、拍嗝、黄疸"
+                        }
+                    )
+                },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
                 trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, "清除") } },
                 shape = RoundedCornerShape(28.dp),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = layout.horizontalPadding, vertical = 10.dp),
             )
-            if (layout.expanded) {
+            if (tab == KnowledgeTab.MINE) {
+                MyRemediesList(nav, remedies, query)
+            } else if (layout.expanded) {
                 Row(Modifier.fillMaxSize()) {
                     Box(Modifier.weight(0.42f).fillMaxHeight()) {
-                        if (tab == 0) RemedyList(remedies, query, trimester, selectedRemedy) { selectedRemedy = it.id }
+                        if (tab == KnowledgeTab.REMEDIES) RemedyList(remedies, query, trimester, selectedRemedy) { selectedRemedy = it.id }
                         else LessonList(classes, query, selectedLesson) { selectedLesson = it.id }
                     }
                     VerticalDivider()
                     Box(Modifier.weight(0.58f).fillMaxHeight()) {
-                        if (tab == 0) {
+                        if (tab == KnowledgeTab.REMEDIES) {
                             val r = remedies.remedies.firstOrNull { it.id == selectedRemedy } ?: remedies.remedies.firstOrNull()
-                            if (r != null) RemedyDetailContent(r, remedies)
+                            if (r != null) RemedyDetailContent(r, remedies, nav)
                         } else {
                             val l = classes.lesson(selectedLesson.orEmpty()) ?: classes.lessons.firstOrNull()
                             if (l != null) LessonDetailContent(l, classes)
@@ -106,7 +138,7 @@ fun KnowledgeScreen(nav: NavController, initialTab: Int) {
                     }
                 }
             } else {
-                if (tab == 0) RemedyList(remedies, query, trimester, null) { nav.navigate(Routes.remedy(it.id)) }
+                if (tab == KnowledgeTab.REMEDIES) RemedyList(remedies, query, trimester, null) { nav.navigate(Routes.remedy(it.id)) }
                 else LessonList(classes, query, null) { nav.navigate(Routes.lesson(it.id)) }
             }
         }

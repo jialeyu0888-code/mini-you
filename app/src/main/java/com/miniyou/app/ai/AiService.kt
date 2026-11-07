@@ -47,6 +47,8 @@ data class CheckinDraft(val name: String, val emoji: String, val note: String, v
 
 data class PregnancyDraft(val lmp: LocalDate?, val source: String)
 
+data class MyRemedyDraft(val symptom: String, val title: String, val content: String)
+
 private const val BASE_SYSTEM = "你是一名细心的中文孕期健康助理，擅长从照片和截图中准确提取信息。" +
     "只根据图片中能看到的内容作答，看不清或没有的信息填空字符串或 null，绝不编造。" +
     "必须只输出一个合法的 JSON 对象，不要输出任何解释或 Markdown。"
@@ -190,6 +192,29 @@ class AiService(private val context: Context, private val settings: SettingsStor
             it.groupValues[1].toInt() * 60 + it.groupValues[2].toInt()
         }
         return CheckinDraft(o.s("name"), o.s("emoji").ifBlank { "💊" }, o.s("note"), minutes)
+    }
+
+    suspend fun parseMyRemedy(uris: List<Uri>, symptoms: List<String>): MyRemedyDraft {
+        val prompt = """
+            这是孕妈记录的缓解孕期不适的方法：可能是手写笔记、聊天/社交平台截图、医生医嘱或食物/物品照片。请整理成一条个人攻略，返回：
+            {
+              "symptom": "针对的症状，优先从以下列表选一个完全一致的：${symptoms.joinToString("、")}；都不合适时写简短的症状名",
+              "title": "方法名称，10 字以内，如 睡前喝温牛奶",
+              "content": "具体做法和注意事项，条理清楚，100 字以内；如果涉及药物，注明需遵医嘱"
+            }
+            只输出 JSON。
+        """.trimIndent()
+        val o = ZhipuClient.visionJson(key, BASE_SYSTEM, prompt, images(uris, 1600))
+        return MyRemedyDraft(o.s("symptom"), o.s("title"), o.s("content"))
+    }
+
+    suspend fun bellyCaption(uris: List<Uri>, week: String): String {
+        val prompt = """
+            这是一张准妈妈的孕肚纪念照${if (week.isNotBlank()) "，拍摄时孕 $week 周" else ""}。
+            请以妈妈的口吻写一句温柔、真诚、不浮夸的纪念文案（30 字以内），可以结合照片里的场景或穿着。返回：{"caption": "..."}，只输出 JSON。
+        """.trimIndent()
+        val o = ZhipuClient.visionJson(key, BASE_SYSTEM, prompt, images(uris, 1024))
+        return o.s("caption")
     }
 
     suspend fun parsePregnancyDates(uris: List<Uri>): PregnancyDraft {

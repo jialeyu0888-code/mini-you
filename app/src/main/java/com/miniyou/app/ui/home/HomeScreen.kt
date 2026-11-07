@@ -51,6 +51,8 @@ import com.miniyou.app.data.toDate
 import com.miniyou.app.data.weekdayCn
 import com.miniyou.app.ui.AppScaffold
 import com.miniyou.app.ui.Routes
+import com.miniyou.app.ui.knowledge.KnowledgeTab
+import com.miniyou.app.ui.open
 import com.miniyou.app.ui.checkin.toggleCheckin
 import com.miniyou.app.ui.components.SoftCard
 import com.miniyou.app.ui.components.app
@@ -100,7 +102,7 @@ fun HomeScreen(nav: NavController) {
             val left: @Composable () -> Unit = {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     if (info != null) PregnancyHero(info)
-                    NextCheckupCard(info, nextCheckup, today, onRecord = { nav.navigate(Routes.CHECKUPS) }, onSchedule = { nav.navigate(Routes.SCHEDULE) })
+                    NextCheckupCard(info, nextCheckup, today, onRecord = { nav.open(Routes.CHECKUPS) }, onSchedule = { nav.navigate(Routes.SCHEDULE) })
                 }
             }
             val right: @Composable () -> Unit = {
@@ -240,8 +242,10 @@ private fun QuickEntries(nav: NavController) {
         Entry("📔", "孕期日记", "记录心情点滴", Color(0xFFFFEBDD), Routes.DIARY),
         Entry("🛍️", "购物清单", "待产包不遗漏", Color(0xFFE6F4EE), Routes.SHOPPING),
         Entry("✅", "每日打卡", "叶酸钙片不漏吃", Color(0xFFECE7FB), Routes.CHECKIN),
-        Entry("🌿", "缓解攻略", "孕期不适怎么办", Color(0xFFE3F1FB), Routes.knowledge(0)),
-        Entry("👶", "准爸妈课堂", "新生儿照护", Color(0xFFFFF3D6), Routes.knowledge(1)),
+        Entry("🤰", "孕肚记录", "记录每周的变化", Color(0xFFFCE7F3), Routes.BELLY),
+        Entry("💗", "我的攻略", "对我有效的方法", Color(0xFFF3E8FF), Routes.knowledge(KnowledgeTab.MINE)),
+        Entry("🌿", "缓解攻略", "孕期不适怎么办", Color(0xFFE3F1FB), Routes.knowledge(KnowledgeTab.REMEDIES)),
+        Entry("👶", "准爸妈课堂", "新生儿照护", Color(0xFFFFF3D6), Routes.knowledge(KnowledgeTab.CLASSES)),
     )
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("常用功能", style = MaterialTheme.typography.titleMedium)
@@ -249,7 +253,7 @@ private fun QuickEntries(nav: NavController) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 row.forEach { e ->
                     Surface(
-                        onClick = { nav.navigate(e.route) },
+                        onClick = { nav.open(e.route) },
                         color = e.color, shape = RoundedCornerShape(20.dp),
                         modifier = Modifier.weight(1f).height(76.dp),
                     ) {
