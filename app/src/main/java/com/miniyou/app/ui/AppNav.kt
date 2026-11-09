@@ -1,6 +1,5 @@
 package com.miniyou.app.ui
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -9,15 +8,22 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.automirrored.outlined.Assignment
+import androidx.compose.material.icons.outlined.AutoStories
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.ShoppingBag
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.NavigationRailItemDefaults
@@ -28,10 +34,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.miniyou.app.R
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -44,19 +51,26 @@ import com.miniyou.app.ui.belly.BellyEditScreen
 import com.miniyou.app.ui.belly.BellyScreen
 import com.miniyou.app.ui.checkin.CheckinScreen
 import com.miniyou.app.ui.checkup.CheckupDetailScreen
+import com.miniyou.app.ui.checkup.CheckupAnalysisScreen
 import com.miniyou.app.ui.checkup.CheckupEditScreen
 import com.miniyou.app.ui.checkup.CheckupListScreen
+import com.miniyou.app.ui.checkup.CheckupPlanEditScreen
+import com.miniyou.app.ui.checkup.CheckupPlansScreen
 import com.miniyou.app.ui.checkup.ScheduleScreen
 import com.miniyou.app.ui.components.app
 import com.miniyou.app.ui.diary.DiaryEditScreen
 import com.miniyou.app.ui.diary.DiaryScreen
 import com.miniyou.app.ui.home.HomeScreen
+import com.miniyou.app.ui.home.HomeBottomBar
 import com.miniyou.app.ui.knowledge.KnowledgeScreen
 import com.miniyou.app.ui.knowledge.LessonDetailScreen
 import com.miniyou.app.ui.knowledge.MyRemedyEditScreen
 import com.miniyou.app.ui.knowledge.RemedyDetailScreen
 import com.miniyou.app.ui.onboarding.OnboardingScreen
 import com.miniyou.app.ui.settings.SettingsScreen
+import com.miniyou.app.ui.shopping.ShoppingBoardScreen
+import com.miniyou.app.ui.shopping.ShoppingBoughtScreen
+import com.miniyou.app.ui.shopping.ShoppingChecklistScreen
 import com.miniyou.app.ui.shopping.ShoppingDetailScreen
 import com.miniyou.app.ui.shopping.ShoppingEditScreen
 import com.miniyou.app.ui.shopping.ShoppingScreen
@@ -65,15 +79,21 @@ import com.miniyou.app.ui.theme.LocalWindowLayout
 object Routes {
     const val HOME = "home"
     const val CHECKUPS = "checkups"
+    const val CHECKUP_ANALYSIS = "checkup-analysis"
+    const val CHECKUP_PLANS = "checkup-plans"
     const val DIARY = "diary"
     const val SHOPPING = "shopping"
+    const val SHOPPING_BOARD = "shopping/board"
+    const val SHOPPING_LIST = "shopping/list"
+    const val SHOPPING_BOUGHT = "shopping/bought"
     const val KNOWLEDGE = "knowledge"
     const val SETTINGS = "settings"
     const val CHECKIN = "checkin"
     const val SCHEDULE = "schedule"
     const val BELLY = "belly"
 
-    fun checkupEdit(id: Long = -1) = "checkup/edit?id=$id"
+    fun checkupEdit(id: Long = -1, ai: Boolean = false) = "checkup/edit?id=$id&ai=$ai"
+    fun checkupPlanEdit(id: Long = -1) = "checkup-plan/edit?id=$id"
     fun checkupDetail(id: Long) = "checkup/$id"
     fun diaryEdit(id: Long = -1, date: Long = -1) = "diary/edit?id=$id&date=$date"
     fun shoppingDetail(id: Long) = "shopping/view/$id"
@@ -85,7 +105,7 @@ object Routes {
     fun lesson(id: String) = "lesson/$id"
 }
 
-private data class Tab(val route: String, val label: String, val icon: Int) {
+private data class Tab(val route: String, val label: String, val icon: ImageVector, val selectedIcon: ImageVector) {
     fun matches(current: String) = current == route || current.startsWith("$route?")
 }
 
@@ -118,11 +138,11 @@ fun NavController.open(route: String) {
 }
 
 private val tabs = listOf(
-    Tab(Routes.HOME, "首页", R.drawable.home_tab_home),
-    Tab(Routes.CHECKUPS, "产检", R.drawable.home_tab_checkup),
-    Tab(Routes.DIARY, "日记", R.drawable.home_tab_diary),
-    Tab(Routes.SHOPPING, "购物", R.drawable.home_tab_shopping),
-    Tab(Routes.KNOWLEDGE, "百科", R.drawable.home_tab_knowledge),
+    Tab(Routes.HOME, "首页", Icons.Outlined.Home, Icons.Filled.Home),
+    Tab(Routes.CHECKUPS, "产检", Icons.AutoMirrored.Outlined.Assignment, Icons.AutoMirrored.Outlined.Assignment),
+    Tab(Routes.DIARY, "日记", Icons.Outlined.AutoStories, Icons.Outlined.AutoStories),
+    Tab(Routes.SHOPPING, "购物", Icons.Outlined.ShoppingBag, Icons.Outlined.ShoppingBag),
+    Tab(Routes.KNOWLEDGE, "百科", Icons.AutoMirrored.Outlined.MenuBook, Icons.AutoMirrored.Outlined.MenuBook),
 )
 
 /** 是否由外层底部导航栏负责底部系统栏留白。 */
@@ -134,6 +154,7 @@ fun AppScaffold(
     topBar: @Composable () -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
     bottomBar: @Composable () -> Unit = {},
+    containerColor: Color = MaterialTheme.colorScheme.background,
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val insets = if (LocalBottomBarShown.current) {
@@ -144,7 +165,7 @@ fun AppScaffold(
         floatingActionButton = floatingActionButton,
         bottomBar = bottomBar,
         contentWindowInsets = insets,
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = containerColor,
         content = content,
     )
 }
@@ -160,25 +181,23 @@ fun AppNav() {
     val layout = LocalWindowLayout.current
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route.orEmpty()
-    val topLevel = tabs.any { it.matches(route) }
+    val primaryTab = tabs.firstOrNull { it.matches(route) }
+    val activeRoute = primaryTab?.route ?: when {
+        route.startsWith("diary/") -> Routes.DIARY
+        route.startsWith("shopping/") -> Routes.SHOPPING
+        route.startsWith("checkup") || route == Routes.SCHEDULE -> Routes.CHECKUPS
+        route.startsWith("lesson/") || route.startsWith("remedy/") || route.startsWith("myremedy/") -> Routes.KNOWLEDGE
+        else -> null
+    }
     val showRail = layout.expanded && route.isNotEmpty()
-    val showBottom = !layout.expanded && topLevel
+    val showBottom = !layout.expanded && primaryTab != null
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         bottomBar = {
             if (showBottom) {
-                NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
-                    tabs.forEach { tab ->
-                        val selected = tab.matches(route)
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = { nav.switchTab(tab.route) },
-                            icon = { Image(painterResource(tab.icon), null, Modifier.size(26.dp)) },
-                            label = { Text(tab.label) },
-                            colors = NavigationBarItemDefaults.colors(indicatorColor = androidx.compose.ui.graphics.Color(0xFFF8D0D8)),
-                        )
-                    }
+                HomeBottomBar(primaryTab.route) { destination ->
+                    if (destination != primaryTab.route) nav.switchTab(destination)
                 }
             }
         },
@@ -186,21 +205,24 @@ fun AppNav() {
         Row(Modifier.fillMaxSize().padding(inner)) {
             if (showRail) {
                 NavigationRail(containerColor = MaterialTheme.colorScheme.surface) {
-                    Spacer(Modifier.height(12.dp))
-                    FloatingActionButton(
-                        onClick = { nav.navigate(Routes.CHECKIN) { launchSingleTop = true } },
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    ) { Text("✅") }
-                    Spacer(Modifier.height(20.dp))
-                    Column {
+                    Column(
+                        Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Spacer(Modifier.height(12.dp))
+                        FloatingActionButton(
+                            onClick = { nav.navigate(Routes.CHECKIN) { launchSingleTop = true } },
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        ) { Icon(Icons.Outlined.CheckCircle, "每日打卡") }
+                        Spacer(Modifier.height(20.dp))
                         tabs.forEach { tab ->
-                            val selected = tab.matches(route)
+                            val selected = tab.route == activeRoute
                             NavigationRailItem(
                                 selected = selected,
                                 onClick = { nav.switchTab(tab.route) },
-                                icon = { Image(painterResource(tab.icon), null, Modifier.size(26.dp)) },
+                                icon = { Icon(if (selected) tab.selectedIcon else tab.icon, null) },
                                 label = { Text(tab.label) },
-                                colors = NavigationRailItemDefaults.colors(indicatorColor = androidx.compose.ui.graphics.Color(0xFFF8D0D8)),
+                                colors = NavigationRailItemDefaults.colors(indicatorColor = MaterialTheme.colorScheme.primaryContainer),
                                 modifier = Modifier.padding(vertical = 4.dp),
                             )
                         }
@@ -217,13 +239,36 @@ fun AppNav() {
 @Composable
 private fun AppNavHost(nav: NavHostController, modifier: Modifier) {
     val back: () -> Unit = { nav.popBackStack() }
+    fun backAfterDeleting(detailRoute: String) {
+        if (nav.previousBackStackEntry?.destination?.route == detailRoute) {
+            nav.popBackStack(detailRoute, inclusive = true)
+        } else {
+            back()
+        }
+    }
     NavHost(nav, startDestination = Routes.HOME, modifier = modifier) {
         composable(Routes.HOME) { HomeScreen(nav) }
         composable(Routes.CHECKUPS) { CheckupListScreen(nav) }
+        composable(Routes.CHECKUP_ANALYSIS) { CheckupAnalysisScreen(nav) }
+        composable(Routes.CHECKUP_PLANS) { CheckupPlansScreen(nav, onBack = back) }
         composable(
-            "checkup/edit?id={id}",
+            "checkup-plan/edit?id={id}",
             arguments = listOf(navArgument("id") { type = NavType.LongType; defaultValue = -1L }),
-        ) { CheckupEditScreen(it.arguments?.getLong("id") ?: -1L, onDone = back) }
+        ) { CheckupPlanEditScreen(it.arguments?.getLong("id") ?: -1L, onBack = back) }
+        composable(
+            "checkup/edit?id={id}&ai={ai}",
+            arguments = listOf(
+                navArgument("id") { type = NavType.LongType; defaultValue = -1L },
+                navArgument("ai") { type = NavType.BoolType; defaultValue = false },
+            ),
+        ) {
+            CheckupEditScreen(
+                it.arguments?.getLong("id") ?: -1L,
+                onDone = back,
+                onDeleted = { backAfterDeleting("checkup/{id}") },
+                openAi = it.arguments?.getBoolean("ai") ?: false,
+            )
+        }
         composable("checkup/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) {
             CheckupDetailScreen(it.arguments?.getLong("id") ?: -1L, nav)
         }
@@ -235,8 +280,14 @@ private fun AppNavHost(nav: NavHostController, modifier: Modifier) {
                 navArgument("id") { type = NavType.LongType; defaultValue = -1L },
                 navArgument("date") { type = NavType.LongType; defaultValue = -1L },
             ),
-        ) { DiaryEditScreen(it.arguments?.getLong("id") ?: -1L, it.arguments?.getLong("date") ?: -1L, onDone = back) }
-        composable(Routes.SHOPPING) { ShoppingScreen(nav) }
+        ) { DiaryEditScreen(it.arguments?.getLong("id") ?: -1L, it.arguments?.getLong("date") ?: -1L, onDone = back, nav = nav) }
+        composable(
+            "shopping?focus={focus}",
+            arguments = listOf(navArgument("focus") { type = NavType.StringType; defaultValue = "" }),
+        ) { ShoppingScreen(nav, it.arguments?.getString("focus").orEmpty()) }
+        composable(Routes.SHOPPING_BOARD) { ShoppingBoardScreen(nav) }
+        composable(Routes.SHOPPING_LIST) { ShoppingChecklistScreen(nav) }
+        composable(Routes.SHOPPING_BOUGHT) { ShoppingBoughtScreen(nav) }
         composable("shopping/view/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) {
             ShoppingDetailScreen(it.arguments?.getLong("id") ?: -1L, nav)
         }
@@ -251,6 +302,7 @@ private fun AppNavHost(nav: NavHostController, modifier: Modifier) {
             ShoppingEditScreen(
                 it.arguments?.getLong("id") ?: -1L, it.arguments?.getInt("status") ?: 0,
                 autoAi = it.arguments?.getBoolean("ai") ?: false, onDone = back,
+                onDeleted = { backAfterDeleting("shopping/view/{id}") },
             )
         }
         composable(Routes.BELLY) { BellyScreen(nav) }

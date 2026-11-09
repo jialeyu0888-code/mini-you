@@ -60,17 +60,51 @@ private val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
+private val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE belly_photos ADD COLUMN waistCm TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE belly_photos ADD COLUMN weightKg TEXT NOT NULL DEFAULT ''")
+    }
+}
+
+private val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE `checkup_plans` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `date` INTEGER NOT NULL,
+                `project` TEXT NOT NULL,
+                `hospital` TEXT NOT NULL,
+                `note` TEXT NOT NULL,
+                `sourceCheckupId` INTEGER
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE UNIQUE INDEX `index_checkup_plans_sourceCheckupId` ON `checkup_plans` (`sourceCheckupId`)")
+        db.execSQL(
+            """
+            INSERT INTO checkup_plans (date, project, hospital, note, sourceCheckupId)
+            SELECT nextCheckupDate, '', hospital, nextCheckupNote, id
+            FROM checkups WHERE nextCheckupDate IS NOT NULL ORDER BY id
+            """.trimIndent()
+        )
+    }
+}
+
 @Database(
     entities = [
         Checkup::class, DiaryEntry::class, ShoppingItem::class, ShoppingCategory::class,
         CheckinItem::class, CheckinRecord::class, BellyPhoto::class, MyRemedy::class, FavoriteMethod::class,
+        CheckupPlan::class,
     ],
-    version = 2,
+    version = 4,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun checkups(): CheckupDao
+    abstract fun checkupPlans(): CheckupPlanDao
     abstract fun diary(): DiaryDao
     abstract fun shopping(): ShoppingDao
     abstract fun checkin(): CheckinDao
@@ -80,7 +114,7 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         fun create(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, "miniyou.db")
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build()
     }
 }

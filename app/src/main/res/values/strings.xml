@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">Mini YOU</string>
+    <string name="welcome_title">欢迎来到「%1$s」</string>
+    <string name="about_app_title">%1$s · 孕期管理</string>
+    <string name="checkin_reminder_default">完成后记得在「%1$s」里打卡哦</string>
 </resources>

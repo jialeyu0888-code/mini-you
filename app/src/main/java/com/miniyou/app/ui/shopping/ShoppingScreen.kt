@@ -1,42 +1,32 @@
 package com.miniyou.app.ui.shopping
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.outlined.Category
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
+import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.PrimaryTabRow
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,195 +39,229 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
-import com.miniyou.app.data.db.ShoppingCategory
 import com.miniyou.app.data.db.ShoppingItem
 import com.miniyou.app.data.db.ShoppingStatus
 import com.miniyou.app.ui.AppScaffold
 import com.miniyou.app.ui.Routes
-import com.miniyou.app.ui.components.AiFillCard
-import com.miniyou.app.ui.components.EmptyState
-import com.miniyou.app.ui.components.MainTopBar
-import com.miniyou.app.ui.components.Pill
-import com.miniyou.app.ui.components.SoftCard
+import com.miniyou.app.ui.components.RecordActionsMenu
 import com.miniyou.app.ui.components.app
-import com.miniyou.app.ui.theme.LocalWindowLayout
 import kotlinx.coroutines.launch
-import java.io.File
 
-fun categoryEmoji(name: String) = when (name) {
-    "待产包" -> "🧳"
-    "新生儿服饰" -> "👕"
-    "宝宝生活用品" -> "🛏️"
-    "喂养用品" -> "🍼"
-    "孕妇用品" -> "🤰"
-    "洗护用品" -> "🛁"
-    "出行用品" -> "🚼"
-    "玩具早教" -> "🧸"
-    "其他" -> "📦"
-    else -> "🏷️"
-}
-
-fun money(v: Double) = if (v % 1.0 == 0.0) "¥%.0f".format(v) else "¥%.2f".format(v)
+private const val FAVORITES = -1
 
 @Composable
-fun ShoppingScreen(nav: NavController) {
-    val app = app()
-    val items by app.db.shopping().all().collectAsState(initial = emptyList())
-    val categories by app.db.shopping().categories().collectAsState(initial = emptyList())
-    val layout = LocalWindowLayout.current
-    val scope = rememberCoroutineScope()
-    var tab by rememberSaveable { mutableIntStateOf(0) }
-    var category by rememberSaveable { mutableStateOf<String?>(null) }
-    var manage by remember { mutableStateOf(false) }
+fun ShoppingScreen(nav: NavController, focus: String = "") {
+    ShopTheme {
+        val colors = LocalShopColors.current
+        val app = app()
+        val items by app.db.shopping().all().collectAsState(initial = emptyList())
+        val settings by app.settings.state.collectAsState()
+        val favorites by rememberShoppingMarks().favorites.collectAsState()
+        var status by rememberSaveable(focus) {
+            mutableIntStateOf(when (focus) {
+                "fav" -> FAVORITES
+                "planned" -> ShoppingStatus.PLANNED
+                "decided" -> ShoppingStatus.DECIDED
+                else -> ShoppingStatus.BOUGHT
+            })
+        }
+        var menuOpen by remember { mutableStateOf(false) }
+        var manageCategories by rememberSaveable { mutableStateOf(false) }
+        val categories by app.db.shopping().categories().collectAsState(initial = emptyList())
+        val byStatus = remember(items) { items.groupBy { it.status } }
+        val bought = byStatus[ShoppingStatus.BOUGHT].orEmpty()
+        val decided = byStatus[ShoppingStatus.DECIDED].orEmpty()
+        val planned = byStatus[ShoppingStatus.PLANNED].orEmpty()
+        val shown = when (status) {
+            FAVORITES -> items.filter { it.id in favorites }
+            else -> byStatus[status].orEmpty()
+        }
 
-    val shown = items.filter { it.status == tab && (category == null || it.category == category) }
-    val spent = items.filter { it.status == ShoppingStatus.BOUGHT }.sumOf { it.total }
-    val budget = items.filter { it.status != ShoppingStatus.BOUGHT }.sumOf { it.total }
-
-    AppScaffold(
-        topBar = {
-            MainTopBar("购物记录", "共 ${items.size} 件") {
-                TextButton(onClick = { manage = true }) { Icon(Icons.Outlined.Category, null); Text(" 分类") }
-            }
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = { nav.navigate(Routes.shoppingEdit(status = tab)) }, icon = { Icon(Icons.Default.Add, null) }, text = { Text("添加") })
-        },
-    ) { pad ->
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(layout.gridColumns),
-            modifier = Modifier.padding(pad),
-            contentPadding = PaddingValues(start = layout.horizontalPadding, end = layout.horizontalPadding, top = 4.dp, bottom = 96.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                SoftCard(color = MaterialTheme.colorScheme.secondaryContainer) {
-                    Row {
-                        Stat("已花费", money(spent), Modifier.weight(1f))
-                        Stat("待购预算", money(budget), Modifier.weight(1f))
-                        Stat("已买 / 全部", "${items.count { it.status == ShoppingStatus.BOUGHT }} / ${items.size}", Modifier.weight(1f))
-                    }
-                }
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                AiFillCard("AI 识图批量导入", "最多 8 张。一张订单截图里的多件商品会逐条导入") {
-                    nav.navigate(Routes.shoppingEdit(status = tab, ai = true))
-                }
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Column {
-                    PrimaryTabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.background) {
-                        ShoppingStatus.labels.forEachIndexed { i, l ->
-                            Tab(selected = tab == i, onClick = { tab = i }, text = { Text("$l ${items.count { it.status == i }}") })
+        AppScaffold(containerColor = colors.paper) { pad ->
+            Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.TopCenter) {
+                LazyColumn(
+                    Modifier.widthIn(max = 660.dp).fillMaxSize().padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    item("header") {
+                        Row(
+                            Modifier.fillMaxWidth().padding(top = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                ShopText("购物账本", 26, colors.ink, weight = FontWeight.Bold)
+                                ShopText("消费与预算", 12, colors.secondary)
+                            }
+                            Button(
+                                onClick = { nav.navigate(Routes.shoppingEdit(status = status.coerceAtLeast(0))) },
+                                colors = ButtonDefaults.buttonColors(containerColor = colors.button, contentColor = colors.onButton),
+                            ) {
+                                Icon(Icons.Default.Add, null, Modifier.size(18.dp))
+                                Text("添加商品")
+                            }
+                            Box {
+                                IconButton(onClick = { menuOpen = true }) {
+                                    Icon(Icons.Outlined.MoreHoriz, "更多购物操作", tint = colors.ink)
+                                }
+                                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                    DropdownMenuItem(
+                                        text = { Text("AI 识图导入") },
+                                        onClick = {
+                                            menuOpen = false
+                                            nav.navigate(Routes.shoppingEdit(ai = true))
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("我的收藏") },
+                                        onClick = {
+                                            menuOpen = false
+                                            status = FAVORITES
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("管理分类") },
+                                        onClick = {
+                                            menuOpen = false
+                                            manageCategories = true
+                                        },
+                                    )
+                                }
+                            }
                         }
                     }
-                    Spacer(Modifier.height(8.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        item { FilterChip(category == null, { category = null }, label = { Text("全部") }) }
-                        items(categories, key = { it.name }) { c ->
-                            val n = items.count { it.status == tab && it.category == c.name }
-                            FilterChip(category == c.name, { category = if (category == c.name) null else c.name },
-                                label = { Text("${categoryEmoji(c.name)} ${c.name}${if (n > 0) " $n" else ""}") })
+                    item("spending") { SpendingOverview(bought) }
+                    item("budget") {
+                        BudgetPreview(
+                            spent = bought.amounts(),
+                            decided = decided,
+                            planned = planned,
+                            budget = settings.shoppingBudget?.toBigDecimalOrNull(),
+                            onBudgetChanged = { amount ->
+                                app.settings.update { it.copy(shoppingBudget = amount?.toPlainString()) }
+                            },
+                        )
+                    }
+                    item("items-header") {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            ShopText(
+                                if (status == FAVORITES) "我的收藏" else "商品清单",
+                                20, colors.ink, weight = FontWeight.Bold,
+                            )
+                            StatusTabs(status, bought.size, decided.size, planned.size) { status = it }
+                            val amounts = shown.amounts()
+                            if (shown.isNotEmpty() && status != FAVORITES) {
+                                val label = if (status == ShoppingStatus.BOUGHT) "已记录实付" else "已估价小计"
+                                ShopText(
+                                    "$label ${ledgerMoney(amounts.total)}" +
+                                        if (amounts.unpriced == 0) "" else "  ·  ${amounts.unpriced} 项缺少金额",
+                                    12, colors.secondary,
+                                )
+                            }
                         }
                     }
-                }
-            }
-            if (shown.isEmpty()) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    EmptyState("🛍️", "这里还空空的", "拍商品照片或订单截图，AI 帮你快速记下名称、价格和渠道")
-                }
-            }
-            items(shown, key = { it.id }) { item ->
-                ShoppingCard(item, onClick = { nav.navigate(Routes.shoppingDetail(item.id)) }) {
-                    scope.launch {
-                        app.db.shopping().upsert(item.copy(status = (item.status + 1).coerceAtMost(2), updatedAt = System.currentTimeMillis()))
+                    if (shown.isEmpty()) {
+                        item("empty-items") {
+                            ShopText(
+                                when (status) {
+                                    ShoppingStatus.BOUGHT -> "还没有已购记录。添加商品即可记下实付金额。"
+                                    ShoppingStatus.DECIDED -> "确定要买的商品可以放在这里，方便估算预算。"
+                                    ShoppingStatus.PLANNED -> "想买的商品可以先记在这里，之后再决定。"
+                                    else -> "在商品详情里点爱心，即可加入收藏。"
+                                },
+                                13, colors.secondary, modifier = Modifier.padding(vertical = 8.dp),
+                            )
+                        }
                     }
+                    items(shown, key = { it.id }) { item ->
+                        LedgerItemRow(item, nav)
+                    }
+                    item("bottom-space") { Box(Modifier.padding(bottom = 8.dp)) }
                 }
             }
         }
-    }
-
-    if (manage) CategoryManager(categories, items) { manage = false }
-}
-
-@Composable
-private fun Stat(label: String, value: String, modifier: Modifier) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
+        if (manageCategories) CategoryManagerDialog(categories, items) { manageCategories = false }
     }
 }
 
 @Composable
-private fun ShoppingCard(item: ShoppingItem, onClick: () -> Unit, onAdvance: () -> Unit) {
-    SoftCard(onClick = onClick, contentPadding = PaddingValues(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(64.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-                if (item.photo != null) AsyncImage(File(item.photo), null, contentScale = ContentScale.Crop, modifier = Modifier.size(64.dp))
-                else Text(categoryEmoji(item.category), fontSize = 30.sp)
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(item.name, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Spacer(Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Pill(item.category)
-                    if (item.channel.isNotBlank()) Pill(item.channel, MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer)
-                }
-                Spacer(Modifier.height(4.dp))
-                val priceText = item.price?.let { "${money(it)} × ${item.quantity}" } ?: "数量 ${item.quantity}"
-                Text(priceText + (item.price?.let { "  合计 ${money(item.total)}" } ?: ""), style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            if (item.status < ShoppingStatus.BOUGHT) {
-                FilledTonalButton(onClick = onAdvance, contentPadding = PaddingValues(horizontal = 12.dp)) {
-                    Text(if (item.status == ShoppingStatus.PLANNED) "决定买" else "已买 ✓")
-                }
+private fun StatusTabs(
+    selected: Int,
+    bought: Int,
+    decided: Int,
+    planned: Int,
+    onSelect: (Int) -> Unit,
+) {
+    val colors = LocalShopColors.current
+    val options = listOf(
+        Triple(ShoppingStatus.BOUGHT, "已购买", bought),
+        Triple(ShoppingStatus.DECIDED, "已决定未买", decided),
+        Triple(ShoppingStatus.PLANNED, "计划购买", planned),
+    )
+    Row(
+        Modifier.fillMaxWidth().selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        options.forEach { (status, name, count) ->
+            val active = selected == status
+            val shape = RoundedCornerShape(14.dp)
+            val ink = if (active) colors.accent else colors.ink
+            Column(
+                Modifier.weight(1f).clip(shape)
+                    .background(if (active) colors.pink else colors.card)
+                    .border(1.dp, if (active) colors.accent.copy(alpha = 0.35f) else colors.line, shape)
+                    .selectable(selected = active, role = Role.Tab, onClick = { onSelect(status) })
+                    .padding(horizontal = 3.dp, vertical = 7.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                ShopText(name, 12, ink, weight = FontWeight.SemiBold, center = true)
+                ShopText("$count 项", 11, if (active) ink else colors.secondary)
             }
         }
     }
 }
 
 @Composable
-private fun CategoryManager(categories: List<ShoppingCategory>, items: List<ShoppingItem>, onDismiss: () -> Unit) {
+private fun LedgerItemRow(item: ShoppingItem, nav: NavController) {
+    val colors = LocalShopColors.current
+    val shape = RoundedCornerShape(16.dp)
+    Row(
+        Modifier.fillMaxWidth().clip(shape).background(colors.card)
+            .border(1.dp, colors.line, shape).clickable { nav.navigate(Routes.shoppingDetail(item.id)) }
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ShopThumb(item, Modifier.size(42.dp))
+        Column(Modifier.weight(1f)) {
+            ShopText(item.name, 14, colors.ink, weight = FontWeight.Bold, maxLines = 2)
+            ShopText("${item.ledgerCategory()}  ·  × ${item.quantity}", 11, colors.secondary, maxLines = 1)
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            ShopText(
+                item.recordedAmount?.let(::ledgerMoney) ?: if (item.status == ShoppingStatus.BOUGHT) "未记金额" else "待估价",
+                14, colors.ink, weight = FontWeight.SemiBold,
+            )
+            if (item.recordedAmount != null) {
+                ShopText(if (item.status == ShoppingStatus.BOUGHT) "实付" else "预计", 11, colors.secondary)
+            }
+        }
+        ShoppingItemActions(item, nav, Modifier.align(Alignment.Top))
+    }
+}
+
+@Composable
+internal fun ShoppingItemActions(item: ShoppingItem, nav: NavController, modifier: Modifier = Modifier) {
     val app = app()
     val scope = rememberCoroutineScope()
-    var text by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("管理分类") },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(text, { text = it.take(10) }, singleLine = true, placeholder = { Text("新分类名称") }, modifier = Modifier.weight(1f))
-                    TextButton(onClick = {
-                        val n = text.trim()
-                        if (n.isNotBlank()) scope.launch { app.db.shopping().insertCategories(listOf(ShoppingCategory(n, categories.size))) }
-                        text = ""
-                    }) { Text("添加") }
-                }
-                Spacer(Modifier.height(8.dp))
-                categories.forEach { c ->
-                    val used = items.count { it.category == c.name }
-                    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("${categoryEmoji(c.name)} ${c.name}", modifier = Modifier.weight(1f))
-                        Text("$used 件", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        if (!c.builtin && used == 0) {
-                            IconButton(onClick = { scope.launch { app.db.shopping().deleteCategory(c) } }) { Icon(Icons.Outlined.Delete, "删除") }
-                        } else Spacer(Modifier.width(48.dp))
-                    }
-                }
-                Text("内置分类和仍有商品的分类不能删除", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("完成") } },
+    RecordActionsMenu(
+        "商品", "确定删除「${item.name}」吗？",
+        onEdit = { nav.navigate(Routes.shoppingEdit(item.id)) },
+        onDelete = { scope.launch { app.db.shopping().delete(item) } },
+        modifier = modifier,
+        tint = LocalShopColors.current.secondary,
     )
 }

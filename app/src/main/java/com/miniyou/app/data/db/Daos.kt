@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
@@ -16,6 +17,9 @@ interface CheckupDao {
     @Query("SELECT * FROM checkups ORDER BY date DESC, id DESC")
     suspend fun allOnce(): List<Checkup>
 
+    @Query("SELECT TRIM(hospital) FROM checkups WHERE TRIM(hospital) != '' GROUP BY TRIM(hospital) ORDER BY MAX(date) DESC, MAX(id) DESC")
+    fun hospitals(): Flow<List<String>>
+
     @Query("SELECT * FROM checkups WHERE id = :id")
     fun observe(id: Long): Flow<Checkup?>
 
@@ -25,14 +29,41 @@ interface CheckupDao {
     @Upsert
     suspend fun upsert(item: Checkup): Long
 
+    @Query("UPDATE checkups SET nextCheckupDate = :date, nextCheckupNote = :note WHERE id = :id")
+    suspend fun updateFollowUp(id: Long, date: Long?, note: String)
+
     @Delete
     suspend fun delete(item: Checkup)
+}
+
+@Dao
+interface CheckupPlanDao {
+    @Query("SELECT * FROM checkup_plans ORDER BY date, id")
+    fun all(): Flow<List<CheckupPlan>>
+
+    @Query("SELECT * FROM checkup_plans WHERE date >= :today ORDER BY date, id")
+    suspend fun upcoming(today: Long): List<CheckupPlan>
+
+    @Query("SELECT * FROM checkup_plans WHERE id = :id")
+    suspend fun get(id: Long): CheckupPlan?
+
+    @Query("SELECT * FROM checkup_plans WHERE sourceCheckupId = :id")
+    suspend fun forCheckup(id: Long): CheckupPlan?
+
+    @Upsert
+    suspend fun upsert(plan: CheckupPlan): Long
+
+    @Delete
+    suspend fun delete(plan: CheckupPlan)
 }
 
 @Dao
 interface DiaryDao {
     @Query("SELECT * FROM diary ORDER BY date DESC, createdAt DESC")
     fun all(): Flow<List<DiaryEntry>>
+
+    @Query("SELECT * FROM diary WHERE date = :date ORDER BY createdAt DESC, id DESC")
+    suspend fun byDate(date: Long): List<DiaryEntry>
 
     @Query("SELECT * FROM diary WHERE id = :id")
     suspend fun get(id: Long): DiaryEntry?
@@ -48,6 +79,9 @@ interface DiaryDao {
 interface ShoppingDao {
     @Query("SELECT * FROM shopping ORDER BY updatedAt DESC")
     fun all(): Flow<List<ShoppingItem>>
+
+    @Query("SELECT * FROM shopping")
+    suspend fun allOnce(): List<ShoppingItem>
 
     @Query("SELECT * FROM shopping WHERE id = :id")
     fun observe(id: Long): Flow<ShoppingItem?>
@@ -138,6 +172,12 @@ interface CheckinDao {
 
     @Query("DELETE FROM checkin_records WHERE itemId = :itemId")
     suspend fun deleteRecordsOf(itemId: Long)
+
+    @Transaction
+    suspend fun deleteWithRecords(item: CheckinItem) {
+        deleteRecordsOf(item.id)
+        deleteItem(item)
+    }
 
     @Query("SELECT * FROM checkin_records")
     fun records(): Flow<List<CheckinRecord>>

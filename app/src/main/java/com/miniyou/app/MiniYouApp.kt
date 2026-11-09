@@ -2,6 +2,7 @@ package com.miniyou.app
 
 import android.app.Application
 import com.miniyou.app.ai.AiService
+import com.miniyou.app.data.CheckupPlans
 import com.miniyou.app.data.SettingsStore
 import com.miniyou.app.data.content.ContentRepository
 import com.miniyou.app.data.db.AppDatabase
@@ -24,12 +25,15 @@ class MiniYouApp : Application() {
         private set
     lateinit var ai: AiService
         private set
+    lateinit var checkupPlans: CheckupPlans
+        private set
 
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
         super.onCreate()
         db = AppDatabase.create(this)
+        checkupPlans = CheckupPlans(this, db)
         settings = SettingsStore(this)
         content = ContentRepository(this)
         ai = AiService(this, settings)

@@ -17,6 +17,9 @@ import androidx.compose.ui.unit.sp
 
 val Rose = Color(0xFFE8798F)
 val RoseDeep = Color(0xFFC95C74)
+internal val ActionRose = Color(0xFFAD4053)
+internal val DarkActionRose = Color(0xFFF6A5AD)
+internal val OnDarkActionRose = Color(0xFF35191F)
 val Peach = Color(0xFFF4A88C)
 val Lavender = Color(0xFF9C8BD9)
 val Mint = Color(0xFF6CC3A7)
@@ -27,7 +30,7 @@ val WarnRed = Color(0xFFD9534F)
 val Amber = Color(0xFFE6A23C)
 
 private val LightColors = lightColorScheme(
-    primary = Rose,
+    primary = ActionRose,
     onPrimary = Color.White,
     primaryContainer = Blush,
     onPrimaryContainer = Color(0xFF5E1F2E),
@@ -39,7 +42,7 @@ private val LightColors = lightColorScheme(
     onTertiary = Color.White,
     tertiaryContainer = Color(0xFFECE7FB),
     onTertiaryContainer = Color(0xFF2E2361),
-    background = Color(0xFFFCF0E8),
+    background = Cream,
     onBackground = Ink,
     surface = Color.White,
     onSurface = Ink,
@@ -52,7 +55,7 @@ private val LightColors = lightColorScheme(
     surfaceContainerHighest = Color(0xFFF5E2E5),
     outline = Color(0xFFD9C2C6),
     outlineVariant = Color(0xFFEFDDE0),
-    error = WarnRed,
+    error = Color(0xFFB83A37),
 )
 
 private val DarkColors = darkColorScheme(
@@ -62,6 +65,8 @@ private val DarkColors = darkColorScheme(
     onPrimaryContainer = Color(0xFFFFD9E0),
     secondary = Color(0xFFF7C1A8),
     tertiary = Color(0xFFC9BCF5),
+    tertiaryContainer = Color(0xFF423454),
+    onTertiaryContainer = Color(0xFFF0E5FF),
     background = Color(0xFF1E1719),
     onBackground = Color(0xFFF1DEE1),
     surface = Color(0xFF261D20),
@@ -92,7 +97,6 @@ private val AppTypography = base.copy(
 
 val HeroGradient = Brush.linearGradient(listOf(Color(0xFFF7A1B2), Color(0xFFF4B69C)))
 val SoftGradient = Brush.linearGradient(listOf(Color(0xFFFDE7EB), Color(0xFFFFF0E6)))
-val AiGradient = Brush.linearGradient(listOf(Color(0xFFB9A6F2), Color(0xFFF2A3B8)))
 
 @Composable
 fun MiniYouTheme(content: @Composable () -> Unit) {

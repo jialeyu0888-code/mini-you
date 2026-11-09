@@ -39,6 +39,16 @@ data class Checkup(
     val createdAt: Long = System.currentTimeMillis(),
 )
 
+@Entity(tableName = "checkup_plans", indices = [Index("sourceCheckupId", unique = true)])
+data class CheckupPlan(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val date: Long,
+    val project: String = "",
+    val hospital: String = "",
+    val note: String = "",
+    val sourceCheckupId: Long? = null,
+)
+
 @Entity(tableName = "diary", indices = [Index("date")])
 data class DiaryEntry(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -102,6 +112,10 @@ data class BellyPhoto(
     val week: String = "",
     val photo: String,
     val note: String = "",
+    /** 腹围，单位厘米，例如 "92.0" */
+    val waistCm: String = "",
+    /** 体重，单位千克，例如 "54.8" */
+    val weightKg: String = "",
     val createdAt: Long = System.currentTimeMillis(),
 )
 

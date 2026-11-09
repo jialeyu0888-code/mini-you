@@ -1,0 +1,7 @@
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:inset="10%">
+    <bitmap
+        android:src="@drawable/mini_you_launcher_artwork"
+        android:gravity="fill"
+        android:filter="true" />
+</inset>

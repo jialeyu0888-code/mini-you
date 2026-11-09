@@ -1,4 +1,4 @@
-# 小小你 · Mini You 孕期管理
+# Mini YOU · 孕期管理
 
 一款面向准妈妈的 Android 原生孕期管理 App（中文界面）。基于 Kotlin + Jetpack Compose + Material 3，数据全部保存在手机本地（Room），并接入智谱 **GLM-5.3-Flash** 视觉理解模型，拍照即可自动填写产检单、购物记录等表单。
 
@@ -8,8 +8,8 @@
 
 | 模块 | 功能 |
 | --- | --- |
-| 首页 | 插画风格首页（适配 OPPO Find N5 外屏和展开后的内屏）：孕周、距预产期天数、宝宝大小、下次产检、本阶段产检计划、今日打卡，以及产检、日记、购物、打卡、攻略、课堂入口。首次启动填写末次月经或预产期（也可拍 B 超单让 AI 推算） |
-| 产检记录 | 增删改查；**AI 识图**：拍照或从相册选择产检单（最多 5 张），自动解析检查日期、医院、孕周、检查项目、体重/血压/胎心、各项指标（血常规、尿常规、B 超数据等，含参考范围与偏高/偏低标记）、医生建议、下次产检日期与准备事项，生成可编辑记录；保存后在下次产检**前一天 20:00 和当天 8:00 本地通知提醒**；体重变化曲线；内置孕期产检时间表参考 |
+| 首页 | 首次启动填写末次月经或预产期（也可拍 B 超单 / 产检单让 AI 推算）；显示孕周、距预产期天数、孕期进度、本周宝宝大小与小贴士、下次产检、当前阶段建议检查、今日打卡快捷入口 |
+| 产检 | 可提前添加和编辑多次产检计划，首页显示最近一项；**AI 识图**：拍照或从相册选择产检单（最多 5 张），自动解析检查日期、医院、孕周、检查项目、体重/血压/胎心、各项指标、医生建议和复诊日期，生成可编辑记录；每项计划在**前一天 20:00 和当天 8:00 本地通知提醒**；提供体重变化曲线和产检时间表参考 |
 | 孕期日记 | 心情（9 种表情）、标签（可自定义）、文字、照片；月历视图标注每天心情；**AI 看图写日记**草稿 |
 | 购物记录 | 三种状态：计划购买 / 决定未买 / 已购买；点进商品先看详情，再进入编辑。分类可自定义；记录价格、数量、渠道、图片；统计已花费与待购预算。**AI 识图**一次最多 8 张：一张订单截图里的多件商品会逐条列出来，核对后批量导入 |
 | 孕期打卡 | 默认叶酸、钙片、DHA、维生素 D3，打卡项可增删改（名称、表情、用法备注）；每日打卡、连续天数、累计天数、近 7 天记录；每个打卡项可单独设置每日提醒（已打卡则当天不再提醒）；**AI 识别药瓶/包装**自动填写名称和用法 |
@@ -24,7 +24,7 @@
 
 ### 方式一：直接下载（推荐）
 
-1. 打开仓库的 [Releases 页面](https://github.com/jialeyu0888-code/mini-you/releases)，在最新版本 `v0.2.2` 下载 `mini-you-v0.2.2.apk`。
+1. 打开仓库的 [Releases 页面](https://github.com/jialeyu0888-code/mini-you/releases)，从最新正式版本下载 `mini-you-v<版本号>.apk`。
 2. 手机上打开下载的 APK，如提示「禁止安装未知来源应用」，按提示允许浏览器/文件管理器安装即可（OPPO/ColorOS：设置 → 安全 → 安装外部来源应用）。
 3. 首次打开时请允许「通知」权限，用于产检和打卡提醒。
 
@@ -37,7 +37,7 @@ cd mini-you
 
 # 2. 下载 Release 中的 APK（或按下文自行构建）
 # 3. 手机开启「开发者选项 → USB 调试」，连上电脑后执行：
-adb install -r mini-you-v0.2.2.apk
+adb install -r mini-you-v0.2.4.apk
 ```
 
 `adb` 来自 Android SDK Platform-Tools（[下载地址](https://developer.android.com/tools/releases/platform-tools)）。
@@ -93,14 +93,18 @@ keytool -genkeypair -v -keystore ~/keys/miniyou-release.jks -alias miniyou \
 
 Windows 下使用 `gradlew.bat`。
 
-## 自动发布（GitHub Actions）
+## 版本与发布（GitHub Actions）
 
-推送 `v*` 格式的 tag 时，`.github/workflows/release.yml` 会自动创建 GitHub Release：
+1. 在 `app/build.gradle.kts` 更新 `versionName` 和 `versionCode`。对外版本用 `主版本.次版本.修订号`，分别用于不兼容变更、新功能和修复。每次正式发布都递增 Android 的 `versionCode`，例如从 `0.2.2` / `4` 更新到 `0.2.3` / `5`。
+2. 新建 `docs/releases/v<版本号>.md`。按 [v0.2.4 的说明](docs/releases/v0.2.4.md) 写 `## 中文` 和 `## English` 两节，每节使用 `- ` 列出更新。两节逐条对应，写清用户能看到的变化。
+3. 提交源码、版本号和发布说明后，先运行 `git fetch --tags`，再运行 `python tools/check_release.py v0.2.3`，将示例标签换成待发布版本。把同名标签打在该提交上并推送。也可以在 Actions 手动填写一个已推送的标签。
 
-- 如果 `release-assets` 分支里有 `<tag>/` 目录下预先构建好的 APK，直接把它作为 Release 附件；
-- 否则在 CI 中从源码构建。可在仓库 *Settings → Secrets and variables → Actions* 中配置：
-  - `ZHIPU_API_KEY`：内置的智谱 Key（不配置则用户需在设置页填写）
-  - `KEYSTORE_BASE64`（`base64 -w0 your.jks` 的结果）、`KEYSTORE_PASSWORD`、`KEY_ALIAS`、`KEY_PASSWORD`：正式签名（不配置则使用 CI 临时生成的 debug 签名）
+流程从标签检出源码和双语说明。若 `release-assets` 分支的同名目录内有一个预构建 APK，就使用该 APK，否则在 CI 构建。发布前会核对包名、APK 内部版本、Gradle 版本和标签。发布附件统一命名为 `mini-you-v<版本号>.apk`。已发布的版本需要修正时，使用新的版本号和标签。
+
+可在仓库 *Settings → Secrets and variables → Actions* 中配置以下值。
+
+- `ZHIPU_API_KEY` 用于内置智谱 Key，留空时用户可在设置页填写。
+- `KEYSTORE_BASE64`（`base64 -w0 your.jks` 的结果）、`KEYSTORE_PASSWORD`、`KEY_ALIAS`、`KEY_PASSWORD` 用于正式签名。未配置时源码构建使用 CI 的 debug 签名。
 
 ## AI 识图实现说明
 

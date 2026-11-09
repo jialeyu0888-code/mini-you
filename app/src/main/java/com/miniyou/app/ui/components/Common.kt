@@ -73,6 +73,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -83,7 +86,6 @@ import coil.compose.AsyncImage
 import com.miniyou.app.MiniYouApp
 import com.miniyou.app.data.ImageStore
 import com.miniyou.app.data.cn
-import com.miniyou.app.ui.theme.AiGradient
 import java.io.File
 import java.time.LocalDate
 
@@ -92,12 +94,17 @@ fun app(): MiniYouApp = LocalContext.current.applicationContext as MiniYouApp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BackTopBar(title: String, onBack: () -> Unit, actions: @Composable RowScope.() -> Unit = {}) {
+fun BackTopBar(
+    title: String,
+    onBack: () -> Unit,
+    containerColor: Color = MaterialTheme.colorScheme.background,
+    actions: @Composable RowScope.() -> Unit = {},
+) {
     TopAppBar(
         title = { Text(title, maxLines = 1) },
         navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } },
         actions = actions,
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = containerColor),
     )
 }
 
@@ -194,7 +201,8 @@ fun DateField(
         )
         Box(
             Modifier.matchParentSize().padding(end = if (allowClear && date != null) 48.dp else 0.dp)
-                .clickable(remember { MutableInteractionSource() }, null) { open = true }
+                .clickable(remember { MutableInteractionSource() }, null, role = Role.Button) { open = true }
+                .semantics { contentDescription = date?.let { "$label，${it.cn()}" } ?: label }
         )
     }
     if (open) {
@@ -290,20 +298,27 @@ private fun SheetOption(icon: androidx.compose.ui.graphics.vector.ImageVector, l
 /** 表单顶部的「AI 识图快速填写」入口。 */
 @Composable
 fun AiFillCard(title: String, subtitle: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Surface(onClick = onClick, shape = RoundedCornerShape(22.dp), modifier = modifier.fillMaxWidth(), color = Color.Transparent) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        onClick = onClick, shape = RoundedCornerShape(22.dp), modifier = modifier.fillMaxWidth(),
+        color = colors.tertiaryContainer, contentColor = colors.onTertiaryContainer,
+    ) {
         Row(
-            Modifier.background(AiGradient).padding(horizontal = 18.dp, vertical = 16.dp),
+            Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.3f)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.AutoAwesome, null, tint = Color.White)
+            Box(
+                Modifier.size(34.dp).clip(CircleShape).background(colors.onTertiaryContainer.copy(alpha = 0.10f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(18.dp))
             }
-            Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(title, color = Color.White, style = MaterialTheme.typography.titleMedium)
-                Text(subtitle, color = Color.White.copy(alpha = 0.92f), style = MaterialTheme.typography.bodySmall)
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall)
             }
-            Icon(Icons.Default.PhotoCamera, null, tint = Color.White)
+            Icon(Icons.Default.PhotoCamera, null, modifier = Modifier.size(20.dp))
         }
     }
 }

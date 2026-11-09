@@ -6,50 +6,60 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.miniyou.app.MiniYouApp
+import com.miniyou.app.R
 import com.miniyou.app.ai.AiException
 import com.miniyou.app.data.ImageStore
 import com.miniyou.app.data.PregnancyInfo
@@ -58,22 +68,21 @@ import com.miniyou.app.data.db.Indicator
 import com.miniyou.app.data.toDate
 import com.miniyou.app.notify.Reminders
 import com.miniyou.app.ui.AppScaffold
-import com.miniyou.app.ui.components.AiFillCard
 import com.miniyou.app.ui.components.AiProgressDialog
-import com.miniyou.app.ui.components.BackTopBar
-import com.miniyou.app.ui.components.DateField
 import com.miniyou.app.ui.components.MessageDialog
 import com.miniyou.app.ui.components.PhotoStrip
-import com.miniyou.app.ui.components.SectionTitle
-import com.miniyou.app.ui.components.SoftCard
 import com.miniyou.app.ui.components.app
-import com.miniyou.app.ui.components.rememberPhotoPicker
-import com.miniyou.app.ui.theme.ContentWidth
 import com.miniyou.app.ui.theme.LocalWindowLayout
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 val IndicatorCategories = listOf("血常规", "尿常规", "B超", "生化", "血糖", "甲功", "其他")
+
+private val CheckupProjectOptions = listOf(
+    "常规产检", "早孕 B 超", "建档检查", "NT 检查", "唐氏筛查", "无创 DNA（NIPT）",
+    "大排畸", "糖耐量试验（OGTT）", "小排畸", "胎心监护（NST）", "GBS 筛查", "产科 B 超",
+    "血常规", "尿常规", "孕中期常规产检", "孕中期筛查", "四维彩超",
+)
 
 class CheckupEditVM(private val app: MiniYouApp, private val id: Long) : ViewModel() {
     var date by mutableStateOf(LocalDate.now())
@@ -95,6 +104,8 @@ class CheckupEditVM(private val app: MiniYouApp, private val id: Long) : ViewMod
     var aiLoading by mutableStateOf(false)
     var aiError by mutableStateOf<String?>(null)
     var aiSummary by mutableStateOf<String?>(null)
+    var canDelete by mutableStateOf(false)
+        private set
 
     private val info get() = app.settings.current.lmp?.let { PregnancyInfo(it) }
 
@@ -105,6 +116,7 @@ class CheckupEditVM(private val app: MiniYouApp, private val id: Long) : ViewMod
                 weight = c.weightKg; bpS = c.bpSystolic; bpD = c.bpDiastolic; fhr = c.fetalHeartRate
                 indicators.addAll(c.indicators); advice = c.doctorAdvice; nextDate = c.nextCheckupDate?.toDate()
                 nextNote = c.nextCheckupNote; notes = c.notes; photos.addAll(c.photos); createdAt = c.createdAt
+                canDelete = true
             }
         } else {
             week = info?.gestationAt(date).orEmpty()
@@ -139,12 +151,14 @@ class CheckupEditVM(private val app: MiniYouApp, private val id: Long) : ViewMod
                 d.nextCheckupDate?.let { nextDate = it }
                 if (d.nextCheckupNote.isNotBlank()) nextNote = d.nextCheckupNote
                 uris.forEach { u -> ImageStore.importImage(context, u)?.let(photos::add) }
-                val abnormal = d.indicators.count { it.abnormal }
+                val parts = buildList {
+                    if (d.checkupType.isNotBlank()) add("1 个检查项目")
+                    if (d.indicators.isNotEmpty()) add("${d.indicators.size} 项指标")
+                }
                 aiSummary = buildString {
-                    append("已识别 ${d.indicators.size} 项指标")
-                    if (abnormal > 0) append("，其中 $abnormal 项标记异常")
-                    append("。请核对后保存。")
-                    if (d.summary.isNotBlank()) append("\n\n").append(d.summary)
+                    if (parts.isEmpty()) append("已识别到产检单上的信息")
+                    else append("已识别到 ").append(parts.joinToString("和 "))
+                    append("，已自动为你填写相关信息。请检查确认后保存。")
                 }
             } catch (e: AiException) {
                 aiError = e.message
@@ -156,7 +170,7 @@ class CheckupEditVM(private val app: MiniYouApp, private val id: Long) : ViewMod
         }
     }
 
-    suspend fun save(context: Context) {
+    suspend fun save() {
         val c = Checkup(
             id = if (id > 0) id else 0, date = date.toEpochDay(), hospital = hospital.trim(), gestationalWeek = week.trim(),
             checkupType = type.trim(), weightKg = weight.trim(), bpSystolic = bpS.trim(), bpDiastolic = bpD.trim(),
@@ -164,158 +178,226 @@ class CheckupEditVM(private val app: MiniYouApp, private val id: Long) : ViewMod
             nextCheckupDate = nextDate?.toEpochDay(), nextCheckupNote = nextNote.trim(), notes = notes.trim(),
             photos = photos.toList(), createdAt = createdAt,
         )
-        val newId = app.db.checkups().upsert(c)
-        Reminders.scheduleCheckup(context, c.copy(id = if (id > 0) id else newId))
+        app.checkupPlans.saveCheckup(c)
+    }
+
+    suspend fun delete() {
+        app.db.checkups().get(id)?.let { app.checkupPlans.deleteCheckup(it) }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun CheckupEditScreen(id: Long, onDone: () -> Unit) {
+fun CheckupEditScreen(id: Long, onDone: () -> Unit, onDeleted: () -> Unit, openAi: Boolean = false) {
     val app = app()
     val context = LocalContext.current
+    val colors = prenatalColors()
+    CompositionLocalProvider(LocalPrenatalColors provides colors) {
     val vm = viewModel(key = "checkup-$id") { CheckupEditVM(app, id) }
+    val hospitals by remember(app) { app.db.checkups().hospitals() }.collectAsState(initial = emptyList())
     val scope = rememberCoroutineScope()
     val layout = LocalWindowLayout.current
     var editingIndex by remember { mutableStateOf<Int?>(null) }
-
+    var confirmDelete by remember { mutableStateOf(false) }
+    var aiOpened by rememberSaveable { mutableStateOf(false) }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
-    val aiPick = rememberPhotoPicker(multiple = true, title = "拍产检单 / 化验单 / B超单（可多张）") { vm.runAi(context, it) }
-    val photoPick = rememberPhotoPicker(multiple = true, title = "添加产检单照片") { vm.addPhotos(context, it) }
+    val aiPick = rememberPrenatalPhotoSheet("拍产检单 / 化验单 / B超单（可多张）") { vm.runAi(context, it) }
+    val photoPick = rememberPrenatalPhotoSheet("添加产检单照片") { vm.addPhotos(context, it) }
+
+    LaunchedEffect(openAi) {
+        if (openAi && !aiOpened) {
+            aiOpened = true
+            aiPick()
+        }
+    }
 
     val save: () -> Unit = {
         if (vm.nextDate != null && Build.VERSION.SDK_INT >= 33 && !Reminders.canNotify(context)) {
             permission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
-        scope.launch { vm.save(context); onDone() }
+        scope.launch { vm.save(); onDone() }
     }
 
-    AppScaffold(topBar = {
-        BackTopBar(if (id > 0) "编辑产检记录" else "新增产检记录", onDone) {
-            TextButton(onClick = save) { Text("保存") }
-        }
-    }) { pad ->
-        ContentWidth(maxWidth = 820.dp, modifier = Modifier.padding(pad)) {
-            Column(
-                Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = layout.horizontalPadding, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                AiFillCard("AI 识图快速填写", "拍产检单，自动识别日期、医院、指标、医生建议和下次产检日期", onClick = aiPick)
-
-                SectionTitle("基本信息")
-                FormPair(layout.expanded,
-                    { m -> DateField("检查日期", vm.date, { it?.let(vm::onDateChange) }, m) },
-                    { m -> OutlinedTextField(vm.week, { vm.week = it }, label = { Text("孕周（如 20+3）") }, singleLine = true, modifier = m, shape = RoundedCornerShape(14.dp)) },
-                )
-                FormPair(layout.expanded,
-                    { m -> OutlinedTextField(vm.hospital, { vm.hospital = it }, label = { Text("医院") }, singleLine = true, modifier = m, shape = RoundedCornerShape(14.dp)) },
-                    { m -> OutlinedTextField(vm.type, { vm.type = it }, label = { Text("检查项目（如 NT、大排畸）") }, singleLine = true, modifier = m, shape = RoundedCornerShape(14.dp)) },
-                )
-
-                SectionTitle("体征数据")
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    NumberField("体重 kg", vm.weight, { vm.weight = it }, Modifier.weight(1f))
-                    NumberField("胎心 次/分", vm.fhr, { vm.fhr = it }, Modifier.weight(1f))
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    NumberField("收缩压 mmHg", vm.bpS, { vm.bpS = it }, Modifier.weight(1f))
-                    NumberField("舒张压 mmHg", vm.bpD, { vm.bpD = it }, Modifier.weight(1f))
-                }
-
-                SectionTitle("检查指标（${vm.indicators.size}）") {
-                    TextButton(onClick = { vm.indicators.add(Indicator()); editingIndex = vm.indicators.lastIndex }) {
-                        Icon(Icons.Default.Add, null); Text("添加")
+        AppScaffold(containerColor = colors.paper) { pad ->
+            Column(Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad).imePadding()) {
+                Column(Modifier.fillMaxWidth().background(colors.paper)) {
+                    PrenatalHeader(if (id > 0) "编辑产检记录" else "新增产检记录", onDone) {
+                        if (vm.canDelete) PrenatalTextAction("删除记录", colors.muted) { confirmDelete = true }
+                        PrenatalTextAction("保存", onClick = save)
                     }
                 }
-                if (vm.indicators.isEmpty()) {
-                    Text("血常规、尿常规、B超数据等，可用 AI 识图自动填入", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                } else {
-                    SoftCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp)) {
-                        vm.indicators.forEachIndexed { i, ind ->
-                            Surface(onClick = { editingIndex = i }, color = MaterialTheme.colorScheme.surface) {
-                                IndicatorRow(ind, Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
+                Column(
+                    Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    if (id <= 0) AiBanner(aiPick)
+                    PrenatalSection("基本信息", R.drawable.checkup_ic_plan) {
+                        if (layout.expanded) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                PrenatalDateField("检查日期", vm.date, { it?.let(vm::onDateChange) }, "请选择检查日期", Modifier.weight(1f), required = true)
+                                PrenatalInput("孕周", vm.week, { vm.week = it }, "例如 20+5", Modifier.weight(1f))
+                            }
+                        } else {
+                            PrenatalDateField("检查日期", vm.date, { it?.let(vm::onDateChange) }, "请选择检查日期", required = true)
+                            PrenatalInput("孕周", vm.week, { vm.week = it }, "例如 20+5")
+                        }
+                        PrenatalMenuField("医院", vm.hospital, { vm.hospital = it }, "请选择医院", hospitals)
+                        PrenatalMenuField("检查项目", vm.type, { vm.type = it }, "请选择检查项目", CheckupProjectOptions)
+                    }
+                    PrenatalSection("体征数据", R.drawable.checkup_ic_heart) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            PrenatalInput("体重 kg", vm.weight, { vm.weight = it }, "请输入体重", Modifier.weight(1f), numeric = true)
+                            PrenatalInput("胎心 次/分", vm.fhr, { vm.fhr = it }, "请输入胎心率", Modifier.weight(1f), numeric = true)
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            PrenatalInput("收缩压 mmHg", vm.bpS, { vm.bpS = it }, "请输入收缩压", Modifier.weight(1f), numeric = true)
+                            PrenatalInput("舒张压 mmHg", vm.bpD, { vm.bpD = it }, "请输入舒张压", Modifier.weight(1f), numeric = true)
+                        }
+                    }
+                    PrenatalSection("检查指标（${vm.indicators.size}）", R.drawable.checkup_ic_drop, action = {
+                        PrenatalTextAction("＋ 添加") {
+                            vm.indicators.add(Indicator())
+                            editingIndex = vm.indicators.lastIndex
+                        }
+                    }) {
+                        if (vm.indicators.isEmpty()) {
+                            Text("拍产检单后会自动填入，也可以手动添加", color = colors.muted, fontSize = 12.sp)
+                        } else {
+                            vm.indicators.forEachIndexed { index, indicator ->
+                                Surface(onClick = { editingIndex = index }, color = colors.field, shape = RoundedCornerShape(12.dp)) {
+                                    IndicatorLineEdit(indicator, Modifier.padding(horizontal = 10.dp, vertical = 8.dp))
+                                }
                             }
                         }
                     }
+                    PrenatalSection("医生建议", R.drawable.checkup_ic_note) {
+                        PrenatalInput("建议内容", vm.advice, { vm.advice = it }, "请输入医生建议", minLines = 3)
+                    }
+                    PrenatalSection("下次产检", R.drawable.checkup_ic_calendar) {
+                        PrenatalDateField("下次产检日期", vm.nextDate, { vm.nextDate = it }, "请选择下次产检日期", allowClear = true)
+                        PrenatalInput("下次检查项目 / 准备事项", vm.nextNote, { vm.nextNote = it }, "例如：空腹 8–12 小时，带上产检手册")
+                    }
+                    PrenatalSection("产检单照片", R.drawable.checkup_ic_photo) {
+                        if (vm.photos.isNotEmpty()) PhotoStrip(vm.photos, onRemove = { vm.photos.remove(it) })
+                        Surface(onClick = photoPick, color = colors.field, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
+                            Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text("添加照片", Modifier.weight(1f), color = colors.muted, fontSize = 14.sp)
+                                PrenatalArt(R.drawable.checkup_ai_camera, Modifier.size(42.dp, 34.dp))
+                            }
+                        }
+                    }
+                    PrenatalSection("备注", R.drawable.checkup_ic_note) {
+                        PrenatalInput("备注", vm.notes, { vm.notes = it }, "想记下的其他事情", minLines = 2)
+                    }
+                    Spacer(Modifier.height(18.dp))
                 }
-
-                SectionTitle("医生建议")
-                OutlinedTextField(vm.advice, { vm.advice = it }, placeholder = { Text("医生的诊断意见、注意事项") },
-                    modifier = Modifier.fillMaxWidth(), minLines = 3, shape = RoundedCornerShape(14.dp))
-
-                SectionTitle("下次产检")
-                FormPair(layout.expanded,
-                    { m -> DateField("下次产检日期", vm.nextDate, { vm.nextDate = it }, m, allowClear = true, placeholder = "设置后会提前提醒") },
-                    { m -> OutlinedTextField(vm.nextNote, { vm.nextNote = it }, label = { Text("下次检查项目 / 准备事项") }, modifier = m, shape = RoundedCornerShape(14.dp)) },
-                )
-
-                SectionTitle("产检单照片")
-                PhotoStrip(vm.photos, onAdd = photoPick, onRemove = { vm.photos.remove(it) })
-
-                OutlinedTextField(vm.notes, { vm.notes = it }, label = { Text("备注") }, modifier = Modifier.fillMaxWidth(),
-                    minLines = 2, shape = RoundedCornerShape(14.dp))
-                Button(onClick = save, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(25.dp)) { Text("保存记录") }
-                Spacer(Modifier.height(24.dp))
             }
         }
-    }
 
-    editingIndex?.let { i ->
-        if (i in vm.indicators.indices) {
+    editingIndex?.let { index ->
+        if (index in vm.indicators.indices) {
             IndicatorDialog(
-                initial = vm.indicators[i],
+                initial = vm.indicators[index],
                 onDismiss = {
-                    if (vm.indicators[i].name.isBlank()) vm.indicators.removeAt(i)
+                    if (vm.indicators[index].name.isBlank()) vm.indicators.removeAt(index)
                     editingIndex = null
                 },
-                onDelete = { vm.indicators.removeAt(i); editingIndex = null },
-                onSave = { vm.indicators[i] = it; editingIndex = null },
+                onDelete = { vm.indicators.removeAt(index); editingIndex = null },
+                onSave = { vm.indicators[index] = it; editingIndex = null },
             )
+        }
+    }
+    if (confirmDelete) {
+        PrenatalConfirmDialog("删除产检记录", DeleteCheckupMessage, onDismiss = { confirmDelete = false }) {
+            scope.launch { vm.delete(); onDeleted() }
         }
     }
     if (vm.aiLoading) AiProgressDialog("AI 正在解析产检单…")
     vm.aiError?.let { MessageDialog("识别失败", it) { vm.aiError = null } }
-    vm.aiSummary?.let { MessageDialog("识别完成 ✨", it) { vm.aiSummary = null } }
-}
-
-/** 宽屏两列并排，窄屏上下堆叠。 */
-@Composable
-fun FormPair(expanded: Boolean, first: @Composable (Modifier) -> Unit, second: @Composable (Modifier) -> Unit) {
-    if (expanded) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { first(Modifier.weight(1f)); second(Modifier.weight(1f)) }
-    } else {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { first(Modifier.fillMaxWidth()); second(Modifier.fillMaxWidth()) }
+    vm.aiSummary?.let { PrenatalSuccessDialog(it) { vm.aiSummary = null } }
     }
 }
 
 @Composable
-private fun NumberField(label: String, value: String, onChange: (String) -> Unit, modifier: Modifier) {
-    OutlinedTextField(
-        value, { onChange(it.filter { c -> c.isDigit() || c == '.' }) }, label = { Text(label) }, singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = modifier, shape = RoundedCornerShape(14.dp),
-    )
+private fun AiBanner(onClick: () -> Unit) {
+    val colors = LocalPrenatalColors.current
+    Surface(onClick = onClick, color = colors.aiStart, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            PrenatalArt(R.drawable.checkup_ai_camera, Modifier.size(54.dp, 42.dp))
+            Column(Modifier.padding(start = 8.dp).weight(1f)) {
+                Text("AI 识图快速填写", color = colors.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text("拍产检单，自动识别日期、医院、指标、医生建议和下次产检日期", color = colors.muted, fontSize = 11.sp, lineHeight = 15.sp)
+            }
+        }
+    }
 }
 
 @Composable
-fun IndicatorRow(ind: Indicator, modifier: Modifier = Modifier) {
-    val flagColor = when (ind.flag) {
-        "偏高" -> MaterialTheme.colorScheme.error
-        "偏低" -> com.miniyou.app.ui.theme.Amber
-        "异常" -> MaterialTheme.colorScheme.error
-        else -> MaterialTheme.colorScheme.onSurface
-    }
+private fun IndicatorLineEdit(indicator: Indicator, modifier: Modifier) {
+    val colors = LocalPrenatalColors.current
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(ind.name.ifBlank { "（未命名指标）" }, style = MaterialTheme.typography.bodyMedium)
-            val sub = listOf(ind.category, ind.reference.takeIf { it.isNotBlank() }?.let { "参考 $it" }).filterNotNull().joinToString(" · ")
-            Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Column(horizontalAlignment = Alignment.End) {
-            Text("${ind.value} ${ind.unit}".trim(), style = MaterialTheme.typography.titleSmall, color = flagColor)
-            if (ind.flag.isNotBlank()) Text(
-                when (ind.flag) { "偏高" -> "↑ 偏高"; "偏低" -> "↓ 偏低"; else -> "⚠ 异常" },
-                style = MaterialTheme.typography.labelSmall, color = flagColor,
+            Text(indicator.name.ifBlank { "（未命名指标）" }, color = colors.ink, fontSize = 14.sp)
+            Text(
+                listOf(indicator.category, indicator.reference.takeIf { it.isNotBlank() }?.let { "参考 $it" }).filterNotNull().joinToString(" · "),
+                color = colors.muted, fontSize = 11.sp,
             )
+        }
+        Text(
+            "${indicator.value} ${indicator.unit}".trim().ifBlank { "填写" },
+            color = if (indicator.flag.isNotBlank()) colors.danger else colors.accent,
+            fontWeight = FontWeight.Bold, fontSize = 14.sp,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun rememberPrenatalPhotoSheet(title: String, onResult: (List<Uri>) -> Unit): () -> Unit {
+    val context = LocalContext.current
+    val colors = LocalPrenatalColors.current
+    val callback by rememberUpdatedState(onResult)
+    var show by remember { mutableStateOf(false) }
+    var pending by rememberSaveable { mutableStateOf<String?>(null) }
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+        val path = pending
+        if (ok && path != null) callback(listOf(Uri.parse(path)))
+    }
+    val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(5)) { uris ->
+        if (uris.isNotEmpty()) callback(uris)
+    }
+    if (show) {
+        ModalBottomSheet(onDismissRequest = { show = false }, containerColor = colors.card) {
+            Column(Modifier.padding(horizontal = 18.dp).padding(bottom = 18.dp).navigationBarsPadding()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(title, Modifier.weight(1f), color = colors.ink, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    IconButton(onClick = { show = false }) { Icon(Icons.Default.Close, "关闭", tint = colors.muted) }
+                }
+                PrenatalArt(R.drawable.checkup_form_bunny, Modifier.align(Alignment.CenterHorizontally).size(96.dp, 78.dp))
+                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SheetChoice("拍照", Modifier.weight(1f)) {
+                        show = false
+                        val uri = ImageStore.newCameraUri(context)
+                        pending = uri.toString()
+                        runCatching { camera.launch(uri) }
+                    }
+                    SheetChoice("从相册选择", Modifier.weight(1f)) {
+                        show = false
+                        gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    }
+                }
+            }
+        }
+    }
+    return { show = true }
+}
+
+@Composable
+private fun SheetChoice(label: String, modifier: Modifier, onClick: () -> Unit) {
+    val colors = LocalPrenatalColors.current
+    Surface(onClick = onClick, modifier = modifier.height(64.dp), shape = RoundedCornerShape(16.dp), color = colors.accentSoft) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(label, color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 15.sp)
         }
     }
 }
@@ -323,37 +405,43 @@ fun IndicatorRow(ind: Indicator, modifier: Modifier = Modifier) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun IndicatorDialog(initial: Indicator, onDismiss: () -> Unit, onDelete: () -> Unit, onSave: (Indicator) -> Unit) {
-    var cat by remember { mutableStateOf(initial.category.ifBlank { "其他" }) }
+    val colors = LocalPrenatalColors.current
+    var category by remember { mutableStateOf(initial.category.ifBlank { "其他" }) }
     var name by remember { mutableStateOf(initial.name) }
     var value by remember { mutableStateOf(initial.value) }
     var unit by remember { mutableStateOf(initial.unit) }
-    var ref by remember { mutableStateOf(initial.reference) }
+    var reference by remember { mutableStateOf(initial.reference) }
     var flag by remember { mutableStateOf(initial.flag) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("检查指标") },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = RoundedCornerShape(24.dp), color = colors.card) {
+            Column(Modifier.padding(18.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("检查指标", color = colors.ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    IndicatorCategories.forEach { FilterChip(cat == it, { cat = it }, label = { Text(it) }) }
+                    IndicatorCategories.forEach { FilterChip(category == it, { category = it }, label = { Text(it) }) }
                 }
-                OutlinedTextField(name, { name = it }, label = { Text("名称（如 血红蛋白 HGB）") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                PrenatalInput("名称", name, { name = it }, "例如 血红蛋白")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value, { value = it }, label = { Text("结果") }, singleLine = true, modifier = Modifier.weight(1f))
-                    OutlinedTextField(unit, { unit = it }, label = { Text("单位") }, singleLine = true, modifier = Modifier.weight(1f))
+                    PrenatalInput("结果", value, { value = it }, "118", Modifier.weight(1f))
+                    PrenatalInput("单位", unit, { unit = it }, "g/L", Modifier.weight(1f))
                 }
-                OutlinedTextField(ref, { ref = it }, label = { Text("参考范围") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("" to "正常", "偏高" to "偏高", "偏低" to "偏低", "异常" to "异常").forEach { (k, l) ->
-                        FilterChip(flag == k, { flag = k }, label = { Text(l) })
+                PrenatalInput("参考范围", reference, { reference = it }, "110–150")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("" to "正常", "偏高" to "偏高", "偏低" to "偏低", "异常" to "异常").forEach { (key, label) ->
+                        FilterChip(flag == key, { flag = key }, label = { Text(label) })
                     }
                 }
-                OutlinedButton(onClick = onDelete) { Icon(Icons.Outlined.Delete, null); Text(" 删除该指标") }
+                TextButton(onClick = onDelete) {
+                    Icon(Icons.Outlined.Delete, null, tint = colors.danger)
+                    Text("删除该指标", color = colors.danger)
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) { Text("取消", color = colors.muted) }
+                    TextButton(
+                        onClick = { onSave(Indicator(category, name.trim(), value.trim(), unit.trim(), reference.trim(), flag)) },
+                        enabled = name.isNotBlank(),
+                    ) { Text("确定", color = colors.accent, fontWeight = FontWeight.Bold) }
+                }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = { onSave(Indicator(cat, name.trim(), value.trim(), unit.trim(), ref.trim(), flag)) }, enabled = name.isNotBlank()) { Text("确定") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
-    )
+        }
+    }
 }

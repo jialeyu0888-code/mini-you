@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,10 +40,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.miniyou.app.BuildConfig
+import com.miniyou.app.R
 import com.miniyou.app.ai.ZhipuClient
 import com.miniyou.app.data.PregnancyInfo
 import com.miniyou.app.data.cn
@@ -77,9 +80,9 @@ fun SettingsScreen(onBack: () -> Unit) {
     val info = settings.lmp?.let { PregnancyInfo(it) }
 
     AppScaffold(topBar = { BackTopBar("设置", onBack) }) { pad ->
-        ContentWidth(maxWidth = 720.dp, modifier = Modifier.padding(pad)) {
+        ContentWidth(maxWidth = 720.dp, modifier = Modifier.padding(pad).consumeWindowInsets(pad).imePadding()) {
             Column(
-                Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = layout.horizontalPadding, vertical = 8.dp),
+                Modifier.verticalScroll(rememberScrollState()).padding(horizontal = layout.horizontalPadding, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 SectionTitle("孕期信息")
@@ -160,7 +163,7 @@ fun SettingsScreen(onBack: () -> Unit) {
 
                 SectionTitle("关于")
                 SoftCard {
-                    InfoRow("应用", "小小你 · 孕期管理")
+                    InfoRow("应用", stringResource(R.string.about_app_title, stringResource(R.string.app_name)))
                     InfoRow("版本", BuildConfig.VERSION_NAME)
                     InfoRow("数据", "全部保存在本机，卸载应用会清除")
                     Spacer(Modifier.height(4.dp))

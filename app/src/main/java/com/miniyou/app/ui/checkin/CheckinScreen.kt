@@ -3,8 +3,10 @@ package com.miniyou.app.ui.checkin
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,8 +15,12 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -73,6 +79,7 @@ import com.miniyou.app.ui.components.BackTopBar
 import com.miniyou.app.ui.components.ConfirmDialog
 import com.miniyou.app.ui.components.MessageDialog
 import com.miniyou.app.ui.components.SoftCard
+import com.miniyou.app.ui.components.RecordActionsMenu
 import com.miniyou.app.ui.components.TimePickerDialog
 import com.miniyou.app.ui.components.app
 import com.miniyou.app.ui.components.minutesLabel
@@ -110,56 +117,28 @@ fun CheckinScreen(onBack: () -> Unit) {
     val byItem = remember(records) { records.groupBy { it.itemId }.mapValues { e -> e.value.map(CheckinRecord::date).toSet() } }
     var editing by remember { mutableStateOf<CheckinItem?>(null) }
     var deleting by remember { mutableStateOf<CheckinItem?>(null) }
+    BackHandler(enabled = editing != null) { editing = null }
+    fun delete(item: CheckinItem) {
+        scope.launch {
+            app.db.checkin().deleteWithRecords(item)
+            Reminders.cancelCheckin(context, item.id)
+        }
+    }
 
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     fun ensureNotify() {
         if (Build.VERSION.SDK_INT >= 33 && !Reminders.canNotify(context)) permission.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 
-    AppScaffold(
-        topBar = { BackTopBar("每日打卡", onBack) },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = { editing = CheckinItem(id = 0, name = "", sortOrder = items.size) },
-                icon = { Icon(Icons.Default.Add, null) }, text = { Text("新增打卡项") })
-        },
-    ) { pad ->
-        val done = items.count { today.toEpochDay() in (byItem[it.id] ?: emptySet()) }
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(layout.gridColumns),
-            contentPadding = PaddingValues(start = layout.horizontalPadding, end = layout.horizontalPadding, top = pad.calculateTopPadding() + 8.dp, bottom = pad.calculateBottomPadding() + 96.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                SoftCard(color = MaterialTheme.colorScheme.primaryContainer) {
-                    Text("${today.monthValue}月${today.dayOfMonth}日 ${today.weekdayCn()}", style = MaterialTheme.typography.bodyMedium)
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text("今日已完成 ", style = MaterialTheme.typography.titleMedium)
-                        Text("$done", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                        Text(" / ${items.size}", style = MaterialTheme.typography.titleMedium)
-                    }
-                    Text(
-                        if (items.isNotEmpty() && done == items.size) "太棒了，今天的营养都补充到位啦 🎉" else "坚持每天补充，宝宝和你一起变得更强壮～",
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
-            }
-            items(items, key = { it.id }) { item ->
-                val days = byItem[item.id] ?: emptySet()
-                CheckinCard(
-                    item = item, days = days, today = today,
-                    onToggle = { scope.launch { toggleCheckin(app, item.id, today) } },
-                    onEdit = { editing = item },
-                )
-            }
-        }
-    }
-
-    editing?.let { item ->
+    val colors = com.miniyou.app.ui.checkup.prenatalColors()
+    var celebrate by remember { mutableStateOf(false) }
+    androidx.compose.runtime.CompositionLocalProvider(com.miniyou.app.ui.checkup.LocalPrenatalColors provides colors) {
+    val editingItem = editing
+    if (editingItem != null) {
         CheckinItemDialog(
-            initial = item,
+            initial = editingItem,
             onDismiss = { editing = null },
-            onDelete = if (item.id != 0L) ({ deleting = item; editing = null }) else null,
+            onDelete = if (editingItem.id != 0L) ({ deleting = editingItem; editing = null }) else null,
             onSave = { saved ->
                 editing = null
                 if (saved.reminderEnabled) ensureNotify()
@@ -170,65 +149,131 @@ fun CheckinScreen(onBack: () -> Unit) {
                 }
             },
         )
-    }
-    deleting?.let { item ->
-        ConfirmDialog("删除打卡项", "确定删除「${item.name}」及其全部打卡记录吗？", onDismiss = { deleting = null }) {
-            scope.launch {
-                Reminders.cancelCheckin(context, item.id)
-                app.db.checkin().deleteRecordsOf(item.id)
-                app.db.checkin().deleteItem(item)
+    } else {
+    AppScaffold(containerColor = colors.paper, topBar = { BackTopBar("每日打卡", onBack, containerColor = colors.paper) }) { pad ->
+        val weekStart = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+        val weekDays = (0..6).map { weekStart.plusDays(it.toLong()).toEpochDay() }
+        val finishedDays = weekDays.count { day -> items.any { day in (byItem[it.id] ?: emptySet()) } }
+        Column(Modifier.fillMaxSize().padding(pad)) {
+            Column(Modifier.padding(horizontal = 18.dp, vertical = 8.dp)) {
+                Text("坚持打卡", color = colors.ink, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("照顾好自己和宝宝", color = colors.muted, fontSize = 13.sp)
             }
+            com.miniyou.app.ui.checkup.PrenatalCard(
+                Modifier.padding(horizontal = 14.dp),
+                color = colors.pinkCard,
+            ) {
+                Text("本周进度", color = colors.ink, fontSize = 14.sp)
+                Text("$finishedDays / 7 天", color = colors.ink, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                Box(
+                    Modifier.padding(top = 8.dp).fillMaxWidth().height(8.dp).clip(RoundedCornerShape(50))
+                        .background(colors.accent.copy(alpha = 0.18f)),
+                ) {
+                    Box(
+                        Modifier.fillMaxWidth((finishedDays / 7f).coerceIn(0f, 1f)).height(8.dp)
+                            .background(colors.accent),
+                    )
+                }
+            }
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(layout.gridColumns),
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(items, key = { it.id }) { item ->
+                    val days = byItem[item.id] ?: emptySet()
+                    CheckinCard(
+                        item = item, days = days, today = today,
+                        onToggle = {
+                            scope.launch {
+                                val wasDone = today.toEpochDay() in days
+                                toggleCheckin(app, item.id, today)
+                                val allDone = !wasDone && items.all { candidate ->
+                                    val set = byItem[candidate.id] ?: emptySet()
+                                    candidate.id == item.id || today.toEpochDay() in set
+                                }
+                                if (allDone && items.isNotEmpty()) celebrate = true
+                            }
+                        },
+                        onEdit = { editing = item },
+                        onDelete = { delete(item) },
+                    )
+                }
+            }
+            com.miniyou.app.ui.checkup.PrenatalButton(
+                "＋  新增打卡项",
+                { editing = CheckinItem(id = 0, name = "", sortOrder = items.size) },
+                Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            )
+        }
+    }
+    }
+    if (celebrate) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { celebrate = false }) {
+            Surface(shape = RoundedCornerShape(28.dp), color = colors.card) {
+                Column(Modifier.padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        Modifier.size(72.dp).clip(CircleShape).background(colors.accent),
+                        contentAlignment = Alignment.Center,
+                    ) { Text("✓", color = colors.onAccent, fontSize = 34.sp, fontWeight = FontWeight.Bold) }
+                    Text("今日打卡完成", Modifier.padding(top = 12.dp), color = colors.ink, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("太棒了，今天的营养都补充到位啦。", Modifier.padding(top = 6.dp, bottom = 16.dp), color = colors.muted, fontSize = 14.sp, textAlign = TextAlign.Center)
+                    com.miniyou.app.ui.checkup.PrenatalButton("知道了", onClick = { celebrate = false })
+                }
+            }
+        }
+    }
+    }
+
+    deleting?.let { item ->
+        ConfirmDialog("删除打卡项", deleteCheckinMessage(item), onDismiss = { deleting = null }) {
+            deleting = null
+            delete(item)
         }
     }
 }
 
+private fun deleteCheckinMessage(item: CheckinItem) = "确定删除「${item.name}」及其全部打卡记录吗？"
+
 @Composable
-private fun CheckinCard(item: CheckinItem, days: Set<Long>, today: LocalDate, onToggle: () -> Unit, onEdit: () -> Unit) {
+private fun CheckinCard(
+    item: CheckinItem,
+    days: Set<Long>,
+    today: LocalDate,
+    onToggle: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val colors = com.miniyou.app.ui.checkup.LocalPrenatalColors.current
     val done = today.toEpochDay() in days
     val streak = streakOf(days, today.toEpochDay())
-    SoftCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                Text(item.emoji, fontSize = 24.sp)
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(item.name, style = MaterialTheme.typography.titleMedium)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (item.reminderEnabled) {
-                        Icon(Icons.Outlined.Alarm, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(" ${minutesLabel(item.reminderMinutes)}  ", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Text("连续 $streak 天 · 累计 ${days.size} 天", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            IconButton(onClick = onEdit) { Icon(Icons.Outlined.Edit, "编辑") }
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(40.dp).clip(CircleShape).background(colors.accentSoft).clickable(onClick = onEdit), contentAlignment = Alignment.Center) {
+            Text(item.emoji, fontSize = 20.sp)
         }
-        if (item.note.isNotBlank()) {
-            Text(item.note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
+        Column(Modifier.padding(start = 10.dp).weight(1f).clickable(onClick = onEdit)) {
+            Text(item.name, color = colors.ink, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "连续 $streak 天" + if (item.reminderEnabled) " · ${minutesLabel(item.reminderMinutes)}" else "",
+                color = colors.muted, fontSize = 12.sp,
+            )
         }
-        Spacer(Modifier.height(10.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                (6 downTo 0).forEach { back ->
-                    val d = today.minusDays(back.toLong())
-                    val hit = d.toEpochDay() in days
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(
-                            Modifier.size(22.dp).clip(CircleShape)
-                                .background(if (hit) Mint else MaterialTheme.colorScheme.surfaceVariant),
-                            contentAlignment = Alignment.Center,
-                        ) { if (hit) Text("✓", color = Color.White, fontSize = 11.sp) }
-                        Text(d.weekdayCn().takeLast(1), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
-            if (done) {
-                OutlinedButton(onClick = onToggle, shape = RoundedCornerShape(20.dp)) { Text("已打卡 ✓") }
-            } else {
-                Button(onClick = onToggle, shape = RoundedCornerShape(20.dp)) { Text("打卡") }
-            }
+        Box(
+            Modifier.size(30.dp).clip(CircleShape)
+                .background(if (done) colors.accent else colors.card)
+                .clickable(onClick = onToggle),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (done) Text("✓", color = colors.onAccent, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            else Text("○", color = colors.accent, fontSize = 18.sp)
         }
+        RecordActionsMenu(
+            "打卡项", deleteCheckinMessage(item),
+            onEdit = onEdit, onDelete = onDelete,
+            modifier = Modifier.align(Alignment.Top), tint = colors.muted,
+        )
     }
 }
 
@@ -260,11 +305,13 @@ private fun CheckinItemDialog(initial: CheckinItem, onDismiss: () -> Unit, onDel
         }
     }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (initial.id == 0L) "新增打卡项" else "编辑打卡项") },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val colors = com.miniyou.app.ui.checkup.LocalPrenatalColors.current
+    Column(Modifier.fillMaxSize().background(colors.paper).statusBarsPadding().navigationBarsPadding().imePadding()) {
+        com.miniyou.app.ui.checkup.PrenatalHeader(if (initial.id == 0L) "新增打卡项" else "编辑打卡项", onDismiss)
+        Column(
+            Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
                 AiFillCard("AI 识图填写", "拍药瓶/包装，识别名称和用法", onClick = pick)
                 OutlinedTextField(name, { name = it.take(16) }, label = { Text("名称") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -286,17 +333,18 @@ private fun CheckinItemDialog(initial: CheckinItem, onDismiss: () -> Unit, onDel
                     Switch(remind, { remind = it })
                 }
                 if (onDelete != null) {
-                    TextButton(onClick = onDelete, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("删除此打卡项") }
+                    TextButton(onClick = onDelete) { Text("删除此打卡项", color = colors.danger) }
                 }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
+        }
+        com.miniyou.app.ui.checkup.PrenatalButton(
+            "保存",
+            {
                 onSave(initial.copy(name = name.trim(), emoji = emoji, note = note.trim(), reminderEnabled = remind, reminderMinutes = minutes))
-            }, enabled = name.isNotBlank()) { Text("保存") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
-    )
+            },
+            Modifier.padding(14.dp),
+            enabled = name.isNotBlank(),
+        )
+    }
     if (pickTime) TimePickerDialog(minutes, { pickTime = false }) { minutes = it; pickTime = false }
     if (loading) AiProgressDialog()
     error?.let { MessageDialog("识别失败", it) { error = null } }

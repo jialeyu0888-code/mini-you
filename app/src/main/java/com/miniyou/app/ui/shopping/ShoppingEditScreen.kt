@@ -2,17 +2,24 @@ package com.miniyou.app.ui.shopping
 
 import android.content.Context
 import android.net.Uri
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +31,7 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,8 +55,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -64,6 +76,7 @@ import com.miniyou.app.ui.components.AiFillCard
 import com.miniyou.app.ui.components.AiProgressDialog
 import com.miniyou.app.ui.components.BackTopBar
 import com.miniyou.app.ui.components.ConfirmDialog
+import com.miniyou.app.ui.components.DeleteRecordButton
 import com.miniyou.app.ui.components.MessageDialog
 import com.miniyou.app.ui.components.PhotoStrip
 import com.miniyou.app.ui.components.SectionTitle
@@ -100,7 +113,8 @@ class ShoppingEditVM(private val app: MiniYouApp, private val id: Long, initialS
     var channel by mutableStateOf("")
     var note by mutableStateOf("")
     var photo by mutableStateOf<String?>(null)
-    private var existing: ShoppingItem? = null
+    private var existing by mutableStateOf<ShoppingItem?>(null)
+    val canDelete get() = existing != null
     val batch = mutableStateListOf<BatchLine>()
     private var nextKey = 1
     var aiLoading by mutableStateOf(false)
@@ -111,7 +125,10 @@ class ShoppingEditVM(private val app: MiniYouApp, private val id: Long, initialS
         if (id > 0) viewModelScope.launch {
             app.db.shopping().get(id)?.let { i ->
                 existing = i
-                name = i.name; status = i.status; category = i.category; price = i.price?.let(::fmt).orEmpty()
+                name = i.name
+                status = if (initialStatus == ShoppingStatus.BOUGHT) ShoppingStatus.BOUGHT else i.status
+                category = i.category
+                price = i.price?.let(::fmt).orEmpty()
                 quantity = i.quantity.toString(); channel = i.channel; note = i.note; photo = i.photo
             }
         }
@@ -206,7 +223,9 @@ class ShoppingEditVM(private val app: MiniYouApp, private val id: Long, initialS
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ShoppingEditScreen(id: Long, status: Int, autoAi: Boolean = false, onDone: () -> Unit) {
+fun ShoppingEditScreen(id: Long, status: Int, autoAi: Boolean = false, onDone: () -> Unit, onDeleted: () -> Unit) {
+    ShopTheme {
+    val colors = LocalShopColors.current
     val app = app()
     val context = LocalContext.current
     val vm = viewModel(key = "shop-$id-$status-$autoAi") { ShoppingEditVM(app, id, status, autoAi) }
@@ -214,6 +233,8 @@ fun ShoppingEditScreen(id: Long, status: Int, autoAi: Boolean = false, onDone: (
     val scope = rememberCoroutineScope()
     val layout = LocalWindowLayout.current
     var addCat by remember { mutableStateOf(false) }
+    var pickCategory by remember { mutableStateOf(false) }
+    var pickQty by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     val aiPick = rememberPhotoPicker(
         multiple = true,
@@ -229,80 +250,106 @@ fun ShoppingEditScreen(id: Long, status: Int, autoAi: Boolean = false, onDone: (
             onDone()
         }
     }
+    val title = if (id > 0) "编辑商品" else "添加商品"
 
-    AppScaffold(topBar = {
-        BackTopBar(if (id > 0) "编辑商品" else "添加商品", onDone) {
-            if (id > 0) IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Outlined.Delete, "删除") }
-            TextButton(onClick = save, enabled = vm.batch.isNotEmpty() || vm.name.isNotBlank()) {
-                Text(if (vm.batch.isNotEmpty()) "导入" else "保存")
-            }
+    AppScaffold(containerColor = colors.paper, topBar = {
+        BackTopBar(title, onDone, containerColor = colors.paper) {
+            if (vm.canDelete) DeleteRecordButton("删除商品") { confirmDelete = true }
         }
     }) { pad ->
-        ContentWidth(maxWidth = 760.dp, modifier = Modifier.padding(pad)) {
-            Column(
-                Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = layout.horizontalPadding, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                AiFillCard("AI 识图批量导入", "相册一次最多 $SHOPPING_AI_MAX_IMAGES 张。订单截图里的每件商品都会单独成为一条记录", onClick = aiPick)
-                if (vm.batch.isNotEmpty()) {
-                    vm.batchSummary?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    vm.batch.forEachIndexed { index, line ->
-                        BatchLineCard(
-                            line = line,
-                            onChange = { vm.updateBatch(index, it) },
-                            onPickCategory = { categoryFor = index },
-                            onRemove = { vm.batch.removeAt(index) },
-                        )
+        Box(Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad)) {
+            ShopPaper(Modifier.matchParentSize())
+            Column(Modifier.align(Alignment.TopCenter).widthIn(max = 660.dp).fillMaxSize().imePadding()) {
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = layout.horizontalPadding, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    AiFillCard("AI 识图填写", "从商品图片或订单截图提取信息", onClick = aiPick)
+                    if (vm.batch.isNotEmpty()) {
+                        vm.batchSummary?.let { ShopText(it, 13, colors.secondary) }
+                        vm.batch.forEachIndexed { index, line ->
+                            BatchLineCard(
+                                line = line,
+                                onChange = { vm.updateBatch(index, it) },
+                                onPickCategory = { categoryFor = index },
+                                onRemove = { vm.batch.removeAt(index) },
+                            )
+                        }
+                        TextButton(onClick = { vm.batch.clear(); vm.batchSummary = null }) { Text("清空识别结果，改为手动填写") }
+                    } else {
+                        ShopField("商品名称", vm.name, { vm.name = it })
+                        ShopField("分类", vm.category, {}, readOnly = true, onClick = { pickCategory = true })
+                        ShopText("新建分类", 12, colors.accent, modifier = Modifier.clickable { addCat = true })
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            val priceLabel = if (vm.status == ShoppingStatus.BOUGHT) "实付单价（元）" else "预计单价（元）"
+                            ShopField(priceLabel, vm.price, { vm.price = it.filter { c -> c.isDigit() || c == '.' } }, Modifier.weight(1f), KeyboardType.Decimal)
+                            Column(Modifier.weight(1f)) {
+                                ShopText("数量", 12, colors.secondary)
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    StepperButton("−") {
+                                        val n = (vm.quantity.toIntOrNull() ?: 1) - 1
+                                        if (n >= 1) vm.quantity = n.toString()
+                                    }
+                                    ShopText(vm.quantity.ifBlank { "1" }, 18, colors.ink, weight = FontWeight.Bold, modifier = Modifier.clickable { pickQty = true })
+                                    StepperButton("+") {
+                                        val n = (vm.quantity.toIntOrNull() ?: 1) + 1
+                                        if (n <= 99) vm.quantity = n.toString()
+                                    }
+                                }
+                            }
+                        }
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            ShoppingStatus.labels.forEachIndexed { i, label ->
+                                val on = vm.status == i
+                                Text(
+                                    label,
+                                    color = if (on) colors.onButton else colors.ink,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(if (on) colors.button else colors.card)
+                                        .border(1.dp, colors.line, RoundedCornerShape(12.dp))
+                                        .clickable { vm.status = i }
+                                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                                )
+                            }
+                        }
+                        ShopField("备注（可选）", vm.note, { vm.note = it }, placeholder = "如：收纳尿布、湿巾等日常用品")
+                        ShopField("购买渠道", vm.channel, { vm.channel = it }, placeholder = "淘宝 / 京东 / 母婴店")
+                        PhotoStrip(listOfNotNull(vm.photo), onAdd = if (vm.photo == null) photoPick else null, onRemove = { vm.photo = null })
                     }
-                    Button(
-                        onClick = save,
-                        modifier = Modifier.fillMaxWidth().height(50.dp),
-                        shape = RoundedCornerShape(25.dp),
-                    ) { Text("导入全部 ${vm.batch.count { it.name.isNotBlank() }} 件") }
-                    TextButton(onClick = { vm.batch.clear(); vm.batchSummary = null }) { Text("清空识别结果，改为手动填写") }
+                    Spacer(Modifier.height(8.dp))
                 }
-                if (vm.batch.isNotEmpty()) return@Column
-                OutlinedTextField(vm.name, { vm.name = it }, label = { Text("商品名称") }, singleLine = true,
-                    modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp))
-
-                SectionTitle("状态")
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    ShoppingStatus.labels.forEachIndexed { i, l ->
-                        SegmentedButton(vm.status == i, { vm.status = i }, SegmentedButtonDefaults.itemShape(i, 3)) { Text(l) }
-                    }
+                val batchCount = vm.batch.count { it.name.isNotBlank() }
+                Button(
+                    onClick = save,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    enabled = if (vm.batch.isNotEmpty()) batchCount > 0 else vm.name.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.button, contentColor = colors.onButton),
+                ) {
+                    Text(if (vm.batch.isNotEmpty()) "导入全部 $batchCount 件" else "保存")
                 }
-
-                SectionTitle("分类")
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    categories.forEach { c ->
-                        FilterChip(vm.category == c.name, { vm.category = c.name }, label = { Text("${categoryEmoji(c.name)} ${c.name}") })
-                    }
-                    AssistChip(onClick = { addCat = true }, label = { Text("自定义") }, leadingIcon = { Icon(Icons.Default.Add, null) })
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedTextField(vm.price, { vm.price = it.filter { c -> c.isDigit() || c == '.' } }, label = { Text("单价（元）") },
-                        singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp))
-                    OutlinedTextField(vm.quantity, { vm.quantity = it.filter(Char::isDigit).take(4) }, label = { Text("数量") },
-                        singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp))
-                }
-
-                SectionTitle("购买渠道")
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Channels.forEach { ch -> FilterChip(vm.channel == ch, { vm.channel = if (vm.channel == ch) "" else ch }, label = { Text(ch) }) }
-                }
-                OutlinedTextField(vm.channel, { vm.channel = it }, label = { Text("渠道（可手动输入）") }, singleLine = true,
-                    modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp))
-                OutlinedTextField(vm.note, { vm.note = it }, label = { Text("备注（规格、尺码、颜色等）") },
-                    modifier = Modifier.fillMaxWidth(), minLines = 2, shape = RoundedCornerShape(14.dp))
-
-                SectionTitle("商品图片")
-                PhotoStrip(listOfNotNull(vm.photo), onAdd = if (vm.photo == null) photoPick else null, onRemove = { vm.photo = null })
-                Button(onClick = save, enabled = vm.name.isNotBlank(), modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(25.dp)) { Text("保存") }
-                Spacer(Modifier.height(24.dp))
             }
+        }
+    }
+
+    if (pickCategory) {
+        CategoryPickerDialog(
+            categories = categories.map { it.name }.ifEmpty { listOf(vm.category) },
+            selected = vm.category,
+            onDismiss = { pickCategory = false },
+        ) { name ->
+            vm.category = name
+            pickCategory = false
+        }
+    }
+    if (pickQty) {
+        QuantityDialog(vm.quantity.toIntOrNull() ?: 1, onDismiss = { pickQty = false }) {
+            vm.quantity = it.toString()
+            pickQty = false
         }
     }
 
@@ -317,7 +364,7 @@ fun ShoppingEditScreen(id: Long, status: Int, autoAi: Boolean = false, onDone: (
         )
     }
     if (confirmDelete) ConfirmDialog("删除商品", "确定删除「${vm.name}」吗？", onDismiss = { confirmDelete = false }) {
-        scope.launch { vm.delete(); onDone() }
+        scope.launch { vm.delete(); onDeleted() }
     }
     categoryFor?.let { index ->
         val line = vm.batch.getOrNull(index)
@@ -342,6 +389,51 @@ fun ShoppingEditScreen(id: Long, status: Int, autoAi: Boolean = false, onDone: (
     }
     if (vm.aiLoading) AiProgressDialog("AI 正在识别商品…")
     vm.aiError?.let { MessageDialog("识别失败", it) { vm.aiError = null } }
+    }
+}
+
+@Composable
+private fun ShopField(
+    label: String,
+    value: String,
+    onChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    keyboard: KeyboardType = KeyboardType.Text,
+    readOnly: Boolean = false,
+    placeholder: String = "",
+    onClick: (() -> Unit)? = null,
+) {
+    val colors = LocalShopColors.current
+    Column(modifier) {
+        ShopText(label, 12, colors.secondary)
+        Spacer(Modifier.height(4.dp))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(colors.card)
+                .border(1.dp, colors.line, RoundedCornerShape(14.dp))
+                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+                .padding(horizontal = 12.dp, vertical = 12.dp),
+        ) {
+            if (readOnly) {
+                ShopText(value.ifBlank { "请选择" }, 15, colors.ink)
+            } else {
+                androidx.compose.foundation.text.BasicTextField(
+                    value = value,
+                    onValueChange = onChange,
+                    singleLine = label != "备注（可选）",
+                    textStyle = androidx.compose.ui.text.TextStyle(color = colors.ink, fontSize = 15.sp),
+                    keyboardOptions = KeyboardOptions(keyboardType = keyboard),
+                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = label },
+                    decorationBox = { inner ->
+                        if (value.isEmpty() && placeholder.isNotEmpty()) ShopText(placeholder, 14, colors.secondary)
+                        inner()
+                    },
+                )
+            }
+        }
+    }
 }
 
 @Composable

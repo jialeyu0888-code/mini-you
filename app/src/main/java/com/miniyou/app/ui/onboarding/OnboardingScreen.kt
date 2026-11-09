@@ -1,6 +1,8 @@
 package com.miniyou.app.ui.onboarding
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,9 +33,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.miniyou.app.R
 import com.miniyou.app.ai.AiException
 import com.miniyou.app.data.PregnancyInfo
 import com.miniyou.app.data.cn
@@ -86,7 +92,7 @@ fun PregnancyForm(
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         AiFillCard("AI 识图自动推算", "拍一张 B 超单 / 产检单，自动识别预产期或孕周", onClick = pick)
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            listOf("我知道末次月经", "我知道预产期").forEachIndexed { i, label ->
+            listOf("末次月经", "预产期").forEachIndexed { i, label ->
                 SegmentedButton(selected = mode == i, onClick = { mode = i }, shape = SegmentedButtonDefaults.itemShape(i, 2)) { Text(label) }
             }
         }
@@ -124,16 +130,21 @@ fun PregnancyForm(
 @Composable
 fun OnboardingScreen(onDone: () -> Unit) {
     val settings = app().settings
-    Box(Modifier.fillMaxSize().background(SoftGradient)) {
+    val dark = isSystemInDarkTheme()
+    val background = if (dark) Modifier.background(MaterialTheme.colorScheme.background) else Modifier.background(SoftGradient)
+    Box(Modifier.fillMaxSize().then(background)) {
         ContentWidth(maxWidth = 560.dp) {
             Column(
                 Modifier.fillMaxSize().systemBarsPadding().imePadding().verticalScroll(rememberScrollState()).padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Spacer(Modifier.height(28.dp))
-                Text("🤰", fontSize = 64.sp)
+                Image(
+                    painterResource(R.drawable.home_couple), contentDescription = null,
+                    modifier = Modifier.size(154.dp, 103.dp), alpha = if (dark) 0.82f else 1f,
+                )
                 Spacer(Modifier.height(8.dp))
-                Text("欢迎来到「小小你」", style = MaterialTheme.typography.headlineMedium)
+                Text(stringResource(R.string.welcome_title, stringResource(R.string.app_name)),
+                    style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(6.dp))
                 Text(
                     "陪你记录孕育路上的每一天。\n先告诉我们你的末次月经或预产期，帮你计算孕周吧～",

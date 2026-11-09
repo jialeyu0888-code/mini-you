@@ -14,6 +14,7 @@ data class UserSettings(
     /** 用户在设置页填写的 Key，为空时使用构建时注入的 Key */
     val customApiKey: String = "",
     val knowledgeDisclaimerSeen: Boolean = false,
+    val shoppingBudget: String? = null,
 ) {
     val onboarded: Boolean get() = lmpEpochDay != null
     val lmp: LocalDate? get() = lmpEpochDay?.let(LocalDate::ofEpochDay)
@@ -32,6 +33,7 @@ class SettingsStore(context: Context) {
         nickname = prefs.getString("nickname", "") ?: "",
         customApiKey = prefs.getString("api_key", "") ?: "",
         knowledgeDisclaimerSeen = prefs.getBoolean("knowledge_disclaimer", false),
+        shoppingBudget = prefs.getString("shopping_budget", null),
     )
 
     fun update(transform: (UserSettings) -> UserSettings) {
@@ -41,6 +43,7 @@ class SettingsStore(context: Context) {
             putString("nickname", next.nickname)
             putString("api_key", next.customApiKey.trim())
             putBoolean("knowledge_disclaimer", next.knowledgeDisclaimerSeen)
+            putString("shopping_budget", next.shoppingBudget)
         }.apply()
         _state.value = next.copy(customApiKey = next.customApiKey.trim())
     }
