@@ -1,18 +1,16 @@
 package com.miniyou.app.ui.checkup
 
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState as rememberRowScrollState
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,19 +32,12 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -90,10 +81,10 @@ fun CheckupListScreen(nav: NavController) {
             val records = list
             val open: (Checkup) -> Unit = { if (layout.expanded) selected = it.id else nav.navigate(Routes.checkupDetail(it.id)) }
             val listPane: @Composable (Modifier) -> Unit = { modifier ->
-                Column(modifier) {
+                Box(modifier) {
                     LazyColumn(
-                        Modifier.weight(1f).fillMaxWidth(),
-                        contentPadding = PaddingValues(bottom = 8.dp),
+                        Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 96.dp),
                     ) {
                         item {
                             CheckupListHeader(
@@ -112,15 +103,8 @@ fun CheckupListScreen(nav: NavController) {
                             )
                         }
                         item {
-                            WeightCard(
-                                points = records.orEmpty().filter { it.weightKg.toDoubleOrNull() != null }.sortedBy { it.date },
+                            AnalysisEntryCard(
                                 onAnalyze = { nav.navigate(Routes.CHECKUP_ANALYSIS) },
-                                modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 6.dp),
-                            )
-                        }
-                        item {
-                            AiEntryCard(
-                                onClick = { nav.navigate(Routes.checkupEdit(ai = true)) },
                                 modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 6.dp),
                             )
                         }
@@ -168,10 +152,12 @@ fun CheckupListScreen(nav: NavController) {
                         }
                     }
                     Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.End,
+                        Modifier.align(Alignment.BottomEnd).padding(horizontal = 16.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        RecordFab(onClick = { nav.navigate(Routes.checkupEdit()) }, modifier = Modifier)
+                        RecordFab(onClick = { nav.navigate(Routes.checkupEdit()) })
+                        AiFab(onClick = { nav.navigate(Routes.checkupEdit(ai = true)) })
                     }
                 }
             }
@@ -243,139 +229,84 @@ private fun WeekPlanCard(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalPrenatalColors.current
-    PrenatalCard(modifier, color = colors.pinkCard, contentPadding = PaddingValues(10.dp)) {
+    PrenatalCard(
+        modifier, color = colors.pinkCard, onClick = onOpenPlans,
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 9.dp),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(58.dp).clip(CircleShape).background(colors.accentSoft),
+                Modifier.size(34.dp).clip(CircleShape).background(colors.accentSoft),
                 contentAlignment = Alignment.Center,
             ) {
-                PrenatalArt(R.drawable.checkup_fetus, Modifier.size(54.dp))
+                PrenatalArt(R.drawable.checkup_fetus, Modifier.size(30.dp))
             }
-            Column(Modifier.padding(start = 8.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(Modifier.padding(start = 8.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(
                     pregnancy?.weekLabel ?: "完善孕期信息后显示孕周",
-                    color = colors.ink, fontSize = 17.sp, fontWeight = FontWeight.Bold, lineHeight = 20.sp,
+                    color = colors.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold, lineHeight = 19.sp, maxLines = 1,
                 )
                 if (next != null) {
                     val date = next.date.toDate()
-                    val days = ChronoUnit.DAYS.between(today, date)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        PrenatalIcon(R.drawable.checkup_ic_calendar, Modifier.size(15.dp))
+                        PrenatalIcon(R.drawable.checkup_ic_calendar, Modifier.size(13.dp))
                         Text(
-                            "下次产检：${date.shortCn()} ${date.weekdayCn()}",
-                            Modifier.padding(start = 4.dp).weight(1f),
-                            color = colors.ink, fontSize = 12.sp, maxLines = 1,
+                            "下次产检 ${date.shortCn()} ${date.weekdayCn()}",
+                            Modifier.padding(start = 4.dp), color = colors.muted, fontSize = 12.sp, maxLines = 1,
                         )
-                        Text(
-                            daysUntilLabel(days),
-                            modifier = Modifier.clip(RoundedCornerShape(50)).background(colors.accent).padding(horizontal = 8.dp, vertical = 3.dp),
-                            color = colors.onAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                        )
-                    }
-                    if (next.hospital.isNotBlank()) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            PrenatalIcon(R.drawable.checkup_ic_hospital, Modifier.size(15.dp))
-                            Text(next.hospital, Modifier.padding(start = 4.dp), color = colors.ink, fontSize = 12.sp, maxLines = 1)
-                        }
-                    }
-                    FlowRow(
-                        Modifier.clickable(onClick = onOpenPlans),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            PrenatalIcon(R.drawable.checkup_ic_plan, Modifier.size(13.dp))
-                            Text("本次产检计划", Modifier.padding(start = 4.dp), color = colors.ink, fontSize = 11.sp)
-                        }
-                        if (next.project.isNotBlank()) PrenatalPill(next.project)
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        PrenatalIcon(R.drawable.checkup_ic_bell, Modifier.size(13.dp))
-                        Text("会提前一天提醒你", Modifier.padding(start = 4.dp), color = colors.muted, fontSize = 10.sp)
                     }
                 } else {
-                    Text("还没有下次产检安排", color = colors.muted, fontSize = 13.sp)
-                    FlowRow {
-                        PrenatalTextAction("新增计划", onClick = onAddPlan)
-                        PrenatalTextAction("查看计划", onClick = onOpenPlans)
-                    }
+                    Text("还没有下次产检安排", color = colors.muted, fontSize = 12.sp, maxLines = 1)
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun WeightCard(points: List<Checkup>, onAnalyze: () -> Unit, modifier: Modifier) {
-    val colors = LocalPrenatalColors.current
-    val values = remember(points) { points.mapNotNull { it.weightKg.toDoubleOrNull() } }
-    PrenatalCard(modifier, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            PrenatalIcon(R.drawable.checkup_ic_weight, Modifier.size(18.dp))
-            Text("体重变化", Modifier.padding(start = 6.dp).weight(1f), color = colors.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-            if (values.size >= 2) {
-                val diff = values.last() - values.first()
+            if (next != null) {
+                val days = ChronoUnit.DAYS.between(today, next.date.toDate())
                 Text(
-                    "%s%.1f kg".format(if (diff >= 0) "+" else "", diff),
-                    color = colors.accent, fontSize = 16.sp, fontWeight = FontWeight.Bold,
+                    daysUntilLabel(days),
+                    modifier = Modifier.clip(RoundedCornerShape(50)).background(colors.accent).padding(horizontal = 8.dp, vertical = 3.dp),
+                    color = colors.onAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold,
                 )
+            } else {
+                PrenatalTextAction("新增计划", onClick = onAddPlan)
             }
-            PrenatalTextAction("产检分析", onClick = onAnalyze)
-        }
-        if (values.size >= 2) {
-            Spacer(Modifier.height(4.dp))
-            WeightLine(values, colors.line)
-            Row {
-                Text(points.first().date.toDate().shortCn(), color = colors.muted, fontSize = 11.sp, modifier = Modifier.weight(1f))
-                Text(points.last().date.toDate().shortCn(), color = colors.muted, fontSize = 11.sp)
-            }
-        } else {
-            Text(
-                "记下两次体重后，这里会画出变化曲线",
-                Modifier.padding(top = 8.dp), color = colors.muted, fontSize = 13.sp,
-            )
         }
     }
 }
 
 @Composable
-private fun WeightLine(values: List<Double>, color: Color) {
-            Canvas(Modifier.fillMaxWidth().height(34.dp)) {
-        val min = values.min()
-        val max = values.max()
-        val range = (max - min).takeIf { it > 0.05 } ?: 1.0
-        val step = if (values.size > 1) size.width / (values.size - 1) else 0f
-        val pts = values.mapIndexed { i, v ->
-            Offset(i * step, (size.height - 8f - ((v - min) / range * (size.height - 16f))).toFloat())
-        }
-        val path = Path().apply {
-            pts.forEachIndexed { i, p -> if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y) }
-        }
-        drawPath(path, color, style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round))
-        pts.forEach {
-            drawCircle(color, 5.dp.toPx(), it)
-            drawCircle(Color.White, 2.4.dp.toPx(), it)
-        }
-    }
-}
-
-@Composable
-private fun AiEntryCard(onClick: () -> Unit, modifier: Modifier) {
+private fun AnalysisEntryCard(onAnalyze: () -> Unit, modifier: Modifier) {
     val colors = LocalPrenatalColors.current
-    Row(
-        modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(Brush.horizontalGradient(listOf(colors.aiStart, colors.aiEnd)))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        PrenatalArt(R.drawable.checkup_ai_camera, Modifier.size(58.dp, 46.dp))
-        Column(Modifier.padding(start = 8.dp).weight(1f)) {
-            Text("AI 识图快速录入", color = colors.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-            Text("拍产检单，自动识别日期、医院、指标和下次产检日期", color = colors.muted, fontSize = 10.sp, maxLines = 1)
+    PrenatalCard(modifier, onClick = onAnalyze, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PrenatalIcon(R.drawable.checkup_ic_weight, Modifier.size(16.dp))
+            Text("产检分析", Modifier.padding(start = 6.dp), color = colors.ink, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "体重 · 血压 · 指标趋势",
+                Modifier.padding(start = 8.dp).weight(1f),
+                color = colors.muted, fontSize = 11.sp, maxLines = 1,
+            )
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = colors.muted, modifier = Modifier.size(18.dp))
         }
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = colors.muted)
+    }
+}
+
+@Composable
+private fun AiFab(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val colors = LocalPrenatalColors.current
+    androidx.compose.material3.Surface(
+        onClick = onClick,
+        modifier = modifier,
+        shape = RoundedCornerShape(50),
+        color = colors.card,
+        border = BorderStroke(1.dp, colors.outline),
+        shadowElevation = 6.dp,
+    ) {
+        Row(
+            Modifier.padding(start = 12.dp, end = 14.dp, top = 10.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            PrenatalArt(R.drawable.checkup_ai_camera, Modifier.size(24.dp, 20.dp))
+            Text("AI 识图", Modifier.padding(start = 5.dp), color = colors.ink, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        }
     }
 }
 
@@ -451,18 +382,18 @@ private fun CheckupRecordCard(
 }
 
 @Composable
-private fun RecordFab(onClick: () -> Unit, modifier: Modifier) {
+private fun RecordFab(onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = LocalPrenatalColors.current
     androidx.compose.material3.Surface(
         onClick = onClick,
         modifier = modifier,
         shape = RoundedCornerShape(50),
         color = colors.accent,
-        shadowElevation = 6.dp,
+        shadowElevation = 8.dp,
     ) {
         Text(
-            "＋  记录产检",
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            "＋ 记录产检",
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
             color = colors.onAccent,
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
