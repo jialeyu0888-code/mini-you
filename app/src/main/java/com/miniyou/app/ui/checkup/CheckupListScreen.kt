@@ -1,6 +1,7 @@
 package com.miniyou.app.ui.checkup
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -20,11 +21,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -32,12 +36,16 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -56,6 +64,9 @@ import com.miniyou.app.ui.AppScaffold
 import com.miniyou.app.ui.Routes
 import com.miniyou.app.ui.components.RecordActionsMenu
 import com.miniyou.app.ui.components.app
+import com.miniyou.app.ui.diary.DiaryPhotoImage
+import com.miniyou.app.ui.diary.DiaryPhotoSelection
+import com.miniyou.app.ui.diary.DiaryPhotoViewer
 import com.miniyou.app.ui.theme.LocalWindowLayout
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -72,6 +83,7 @@ fun CheckupListScreen(nav: NavController) {
     val layout = LocalWindowLayout.current
     val colors = prenatalColors()
     var selected by rememberSaveable { mutableLongStateOf(-1L) }
+    var viewingPhotos by remember { mutableStateOf<DiaryPhotoSelection?>(null) }
     val today = LocalDate.now()
     val upcoming = plans.filter { it.date >= today.toEpochDay() }
     val next = upcoming.firstOrNull()
@@ -139,6 +151,7 @@ fun CheckupListScreen(nav: NavController) {
                                     checkup, week,
                                     highlighted = selected == checkup.id && layout.expanded,
                                     onClick = { open(checkup) },
+                                    onPreviewPhoto = { idx -> viewingPhotos = DiaryPhotoSelection(checkup.photos, idx) },
                                     onEdit = { nav.navigate(Routes.checkupEdit(checkup.id)) },
                                     onDelete = {
                                         scope.launch {
@@ -177,6 +190,7 @@ fun CheckupListScreen(nav: NavController) {
             } else {
                 listPane(Modifier.padding(pad).fillMaxSize())
             }
+            viewingPhotos?.let { DiaryPhotoViewer(it) { viewingPhotos = null } }
         }
     }
 }
@@ -330,6 +344,7 @@ private fun CheckupRecordCard(
     week: String,
     highlighted: Boolean,
     onClick: () -> Unit,
+    onPreviewPhoto: (Int) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier,
@@ -347,7 +362,7 @@ private fun CheckupRecordCard(
                 Text(week.ifBlank { "—" }, color = colors.accent, fontSize = 14.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 Text("孕周", color = colors.muted, fontSize = 10.sp)
             }
-            PrenatalArt(checkupKindArt(checkup.checkupType), Modifier.padding(horizontal = 2.dp).size(36.dp, 32.dp))
+            CheckupPhotoThumb(checkup, onPreviewPhoto, Modifier.padding(end = 4.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(checkup.checkupType.ifBlank { "常规产检" }, color = colors.ink, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -378,6 +393,50 @@ private fun CheckupRecordCard(
                 modifier = Modifier.align(Alignment.Top), tint = colors.muted,
             )
         }
+    }
+}
+
+/** 列表卡左侧的产检单缩略图：有真实照片时显示照片（多图可滑动切换），否则回退彩绘。 */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun CheckupPhotoThumb(checkup: Checkup, onPreview: (Int) -> Unit, modifier: Modifier) {
+    if (checkup.photos.isEmpty()) {
+        PrenatalArt(checkupKindArt(checkup.checkupType), modifier.padding(horizontal = 2.dp).size(36.dp, 32.dp))
+        return
+    }
+    Box(modifier.width(48.dp).height(42.dp), contentAlignment = Alignment.Center) {
+        if (checkup.photos.size == 1) {
+            CheckupPhotoFrame(checkup.photos, 0, onPreview, Modifier.size(46.dp, 40.dp))
+        } else {
+            val pager = rememberPagerState { checkup.photos.size }
+            HorizontalPager(state = pager, modifier = Modifier.fillMaxSize()) { page ->
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CheckupPhotoFrame(checkup.photos, page, onPreview, Modifier.size(46.dp, 40.dp))
+                }
+            }
+            Text(
+                "${pager.currentPage + 1}/${checkup.photos.size}",
+                Modifier.align(Alignment.BottomCenter)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .padding(horizontal = 5.dp),
+                color = Color.White,
+                fontSize = 8.sp,
+                lineHeight = 10.sp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CheckupPhotoFrame(photos: List<String>, page: Int, onPreview: (Int) -> Unit, modifier: Modifier) {
+    Surface(onClick = { onPreview(page) }, modifier = modifier, shape = RoundedCornerShape(10.dp), color = Color.White, shadowElevation = 1.dp) {
+        DiaryPhotoImage(
+            photo = photos[page],
+            description = "产检单 ${page + 1}/${photos.size}",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize().padding(2.dp).clip(RoundedCornerShape(7.dp)),
+        )
     }
 }
 

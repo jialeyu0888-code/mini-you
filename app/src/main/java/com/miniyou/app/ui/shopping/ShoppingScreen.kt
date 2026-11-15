@@ -235,7 +235,7 @@ private fun LedgerItemRow(item: ShoppingItem, nav: NavController) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ShopThumb(item, Modifier.size(42.dp))
+        ShopThumb(item, Modifier.size(52.dp))
         Column(Modifier.weight(1f)) {
             ShopText(item.name, 14, colors.ink, weight = FontWeight.Bold, maxLines = 2)
             ShopText("${item.ledgerCategory()}  ·  × ${item.quantity}", 11, colors.secondary, maxLines = 1)
