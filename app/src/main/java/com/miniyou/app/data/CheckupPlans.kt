@@ -31,16 +31,19 @@ class CheckupPlans(private val context: Context, private val db: AppDatabase) {
         Reminders.scheduleCheckupPlan(context, saved)
     }
 
-    suspend fun delete(id: Long) = update {
+    suspend fun delete(id: Long) = deletePlans(setOf(id))
+
+    suspend fun deletePlans(ids: Set<Long>) = update {
         db.withTransaction {
-            plans.get(id)?.let { plan ->
-                plan.sourceCheckupId?.let { checkups.updateFollowUp(it, null, "") }
-                plans.delete(plan)
+            ids.forEach { id ->
+                plans.get(id)?.let { plan ->
+                    plan.sourceCheckupId?.let { checkups.updateFollowUp(it, null, "") }
+                    plans.delete(plan)
+                }
             }
         }
-        Reminders.cancelCheckupPlan(context, id)
+        ids.forEach { Reminders.cancelCheckupPlan(context, it) }
     }
-
     suspend fun saveCheckup(checkup: Checkup) = update {
         var removedPlanId: Long? = null
         val savedPlan = db.withTransaction {
@@ -65,15 +68,19 @@ class CheckupPlans(private val context: Context, private val db: AppDatabase) {
         savedPlan?.let { Reminders.scheduleCheckupPlan(context, it) }
     }
 
-    suspend fun deleteCheckup(checkup: Checkup) = update {
-        val planId = db.withTransaction {
-            val plan = plans.forCheckup(checkup.id)
-            if (plan != null) plans.delete(plan)
-            checkups.delete(checkup)
-            plan?.id
+    suspend fun deleteCheckup(checkup: Checkup) = deleteCheckups(listOf(checkup))
+
+    suspend fun deleteCheckups(records: List<Checkup>) = update {
+        val planIds = db.withTransaction {
+            records.mapNotNull { checkup ->
+                val plan = plans.forCheckup(checkup.id)
+                if (plan != null) plans.delete(plan)
+                checkups.delete(checkup)
+                plan?.id
+            }
         }
-        planId?.let { Reminders.cancelCheckupPlan(context, it) }
-        checkup.photos.forEach(ImageStore::delete)
+        planIds.forEach { Reminders.cancelCheckupPlan(context, it) }
+        records.flatMap { it.photos }.distinct().forEach(ImageStore::delete)
     }
 
     suspend fun reschedule(): Unit = lock.withLock {

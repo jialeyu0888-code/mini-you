@@ -45,7 +45,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -63,6 +65,10 @@ import com.miniyou.app.data.weekdayCn
 import com.miniyou.app.ui.AppScaffold
 import com.miniyou.app.ui.Routes
 import com.miniyou.app.ui.components.RecordActionsMenu
+import com.miniyou.app.ui.components.RecordSelection
+import com.miniyou.app.ui.components.RecordSelectionBar
+import com.miniyou.app.ui.components.RecordSelectionMark
+import com.miniyou.app.ui.components.rememberRecordSelection
 import com.miniyou.app.ui.components.app
 import com.miniyou.app.ui.diary.DiaryPhotoImage
 import com.miniyou.app.ui.diary.DiaryPhotoSelection
@@ -72,10 +78,12 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CheckupListScreen(nav: NavController) {
     val app = app()
     val scope = rememberCoroutineScope()
+    val selection = rememberRecordSelection()
     val list by app.db.checkups().all().collectAsState(initial = null)
     val plans by app.checkupPlans.all.collectAsState(initial = emptyList())
     val settings by app.settings.state.collectAsState()
@@ -126,6 +134,14 @@ fun CheckupListScreen(nav: NavController) {
                                 modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 4.dp),
                             )
                         }
+                        stickyHeader("checkup-multiselect") {
+                            Column(Modifier.fillMaxWidth().background(colors.paper).padding(horizontal = 14.dp)) {
+                                RecordSelectionBar(selection, records.orEmpty().map { it.id }, "产检记录") { ids ->
+                                    app.checkupPlans.deleteCheckups(records.orEmpty().filter { it.id in ids })
+                                    if (selected in ids) selected = -1L
+                                }
+                            }
+                        }
                         if (records == null) {
                             item { Text("正在读取产检记录", Modifier.padding(20.dp), color = colors.muted, fontSize = 13.sp) }
                         } else if (records.isEmpty()) {
@@ -150,8 +166,12 @@ fun CheckupListScreen(nav: NavController) {
                                 CheckupRecordCard(
                                     checkup, week,
                                     highlighted = selected == checkup.id && layout.expanded,
-                                    onClick = { open(checkup) },
-                                    onPreviewPhoto = { idx -> viewingPhotos = DiaryPhotoSelection(checkup.photos, idx) },
+                                    selection = selection,
+                                    onClick = { if (selection.active) selection.toggle(checkup.id) else open(checkup) },
+                                    onPreviewPhoto = { idx ->
+                                        if (selection.active) selection.toggle(checkup.id)
+                                        else viewingPhotos = DiaryPhotoSelection(checkup.photos, idx)
+                                    },
                                     onEdit = { nav.navigate(Routes.checkupEdit(checkup.id)) },
                                     onDelete = {
                                         scope.launch {
@@ -164,7 +184,7 @@ fun CheckupListScreen(nav: NavController) {
                             }
                         }
                     }
-                    Row(
+                    if (!selection.active) Row(
                         Modifier.align(Alignment.BottomEnd).padding(horizontal = 16.dp, vertical = 14.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -343,6 +363,7 @@ private fun CheckupRecordCard(
     checkup: Checkup,
     week: String,
     highlighted: Boolean,
+    selection: RecordSelection,
     onClick: () -> Unit,
     onPreviewPhoto: (Int) -> Unit,
     onEdit: () -> Unit,
@@ -350,12 +371,18 @@ private fun CheckupRecordCard(
     modifier: Modifier,
 ) {
     val colors = LocalPrenatalColors.current
+    val haptics = LocalHapticFeedback.current
     val date = checkup.date.toDate()
     PrenatalCard(
         modifier,
         onClick = onClick,
+        onLongClick = {
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            selection.beginWith(checkup.id)
+        },
         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
-        border = if (highlighted) androidx.compose.foundation.BorderStroke(1.5.dp, colors.accent) else null,
+        border = if (selection.has(checkup.id) || (highlighted && !selection.active))
+            androidx.compose.foundation.BorderStroke(1.5.dp, colors.accent) else null,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.width(46.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -387,7 +414,8 @@ private fun CheckupRecordCard(
                     if (abnormal > 0) PrenatalPill("$abnormal 项异常", colors.danger.copy(alpha = 0.14f), colors.danger)
                 }
             }
-            RecordActionsMenu(
+            if (selection.active) RecordSelectionMark(selection, checkup.id, "产检记录")
+            else RecordActionsMenu(
                 "产检记录", DeleteCheckupMessage,
                 onEdit = onEdit, onDelete = onDelete,
                 modifier = Modifier.align(Alignment.Top), tint = colors.muted,

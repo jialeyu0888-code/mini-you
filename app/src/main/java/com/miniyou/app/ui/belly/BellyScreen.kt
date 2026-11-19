@@ -60,7 +60,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -91,6 +93,10 @@ import com.miniyou.app.ui.components.EmptyState
 import com.miniyou.app.ui.components.MessageDialog
 import com.miniyou.app.ui.components.SoftCard
 import com.miniyou.app.ui.components.RecordActionsMenu
+import com.miniyou.app.ui.components.RecordSelection
+import com.miniyou.app.ui.components.RecordSelectionBar
+import com.miniyou.app.ui.components.RecordSelectionMark
+import com.miniyou.app.ui.components.rememberRecordSelection
 import com.miniyou.app.ui.components.app
 import com.miniyou.app.ui.components.rememberPhotoPicker
 import com.miniyou.app.ui.theme.ContentWidth
@@ -105,6 +111,7 @@ private fun weekLabel(week: String) = if (week.isBlank()) "孕周未填" else "�
 fun BellyScreen(nav: NavController) {
     val app = app()
     val scope = rememberCoroutineScope()
+    val selection = rememberRecordSelection()
     val photos by app.db.belly().all().collectAsState(initial = null)
     val layout = LocalWindowLayout.current
     var viewing by remember { mutableStateOf<Int?>(null) }
@@ -122,6 +129,9 @@ fun BellyScreen(nav: NavController) {
                     Modifier.padding(start = 20.dp, bottom = 8.dp),
                     color = colors.muted, fontSize = 13.sp,
                 )
+                RecordSelectionBar(selection, list.map { it.id }, "孕肚记录", Modifier.padding(horizontal = 14.dp)) { ids ->
+                    deleteBellyPhotos(app, list.filter { it.id in ids })
+                }
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(if (layout.expanded) 2 else 1),
                     contentPadding = PaddingValues(start = 14.dp, end = 14.dp, bottom = 24.dp),
@@ -142,6 +152,7 @@ fun BellyScreen(nav: NavController) {
                         val photo = list[i]
                         BellyCard(
                             photo,
+                            selection = selection,
                             onClick = { viewing = i },
                             onEdit = { nav.navigate(Routes.bellyEdit(photo.id)) },
                             onDelete = { scope.launch { deleteBellyPhoto(app, photo) } },
@@ -203,9 +214,17 @@ private fun WeekBadge(p: BellyPhoto, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun BellyCard(p: BellyPhoto, onClick: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
+private fun BellyCard(p: BellyPhoto, selection: RecordSelection, onClick: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     val colors = com.miniyou.app.ui.checkup.LocalPrenatalColors.current
-    com.miniyou.app.ui.checkup.PrenatalCard(onClick = onClick, contentPadding = androidx.compose.foundation.layout.PaddingValues(10.dp)) {
+    val haptics = LocalHapticFeedback.current
+    com.miniyou.app.ui.checkup.PrenatalCard(
+        onClick = { if (selection.active) selection.toggle(p.id) else onClick() },
+        onLongClick = {
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            selection.beginWith(p.id)
+        },
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(10.dp),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
                 File(p.photo), null, contentScale = ContentScale.Crop,
@@ -218,7 +237,8 @@ private fun BellyCard(p: BellyPhoto, onClick: () -> Unit, onEdit: () -> Unit, on
                     Text(p.note, color = colors.ink, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
-            RecordActionsMenu(
+            if (selection.active) RecordSelectionMark(selection, p.id, "孕肚记录")
+            else RecordActionsMenu(
                 "孕肚照", "删除后无法恢复，确定删除吗？",
                 onEdit = onEdit, onDelete = onDelete,
                 modifier = Modifier.align(Alignment.Top), tint = colors.muted,
@@ -333,9 +353,11 @@ class BellyEditVM(private val app: MiniYouApp, private val id: Long) : ViewModel
     }
 }
 
-private suspend fun deleteBellyPhoto(app: MiniYouApp, photo: BellyPhoto) {
-    app.db.belly().delete(photo)
-    ImageStore.delete(photo.photo)
+private suspend fun deleteBellyPhoto(app: MiniYouApp, photo: BellyPhoto) = deleteBellyPhotos(app, listOf(photo))
+
+private suspend fun deleteBellyPhotos(app: MiniYouApp, photos: List<BellyPhoto>) {
+    app.db.belly().deleteMany(photos)
+    photos.map { it.photo }.distinct().forEach(ImageStore::delete)
 }
 
 @Composable

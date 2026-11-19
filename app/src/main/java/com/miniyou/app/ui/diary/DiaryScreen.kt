@@ -7,6 +7,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -76,8 +78,10 @@ import androidx.compose.ui.graphics.ImageShader
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
@@ -101,6 +105,10 @@ import com.miniyou.app.data.weekdayCn
 import com.miniyou.app.ui.AppScaffold
 import com.miniyou.app.ui.Routes
 import com.miniyou.app.ui.components.RecordActionsMenu
+import com.miniyou.app.ui.components.RecordSelection
+import com.miniyou.app.ui.components.RecordSelectionBar
+import com.miniyou.app.ui.components.RecordSelectionMark
+import com.miniyou.app.ui.components.rememberRecordSelection
 import com.miniyou.app.ui.components.app
 import com.miniyou.app.ui.theme.LocalWindowLayout
 import com.miniyou.app.ui.theme.ActionRose
@@ -254,10 +262,12 @@ private fun DiaryEntry.matchesFilter(filter: DiaryFilter, query: String): Boolea
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun DiaryScreen(nav: NavController) {
     val app = app()
     val scope = rememberCoroutineScope()
+    val selection = rememberRecordSelection()
     val entries by app.db.diary().all().collectAsState(initial = emptyList())
     val settings by app.settings.state.collectAsState()
     val layout = LocalWindowLayout.current
@@ -298,6 +308,13 @@ fun DiaryScreen(nav: NavController) {
 
     val edit: (DiaryEntry) -> Unit = { nav.navigate(Routes.diaryEdit(id = it.id)) }
     val delete: (DiaryEntry) -> Unit = { entry -> scope.launch { deleteDiaryEntry(app, entry) } }
+    val selectionBar: @Composable () -> Unit = {
+        Column(Modifier.fillMaxWidth().background(colors.paper).padding(horizontal = 14.dp)) {
+            RecordSelectionBar(selection, displayedEntries.map { it.id }, "日记") { ids ->
+                deleteDiaryEntries(app, displayedEntries.filter { it.id in ids })
+            }
+        }
+    }
 
     CompositionLocalProvider(LocalDiaryColors provides colors) {
         AppScaffold(containerColor = colors.paper) { pad ->
@@ -406,6 +423,7 @@ fun DiaryScreen(nav: NavController) {
                                 verticalArrangement = Arrangement.spacedBy(10.dp),
                             ) {
                                 item { filterRow() }
+                                stickyHeader("diary-multiselect") { selectionBar() }
                                 if (displayedEntries.isEmpty()) {
                                     item {
                                         EmptyDiaryCard(
@@ -422,6 +440,7 @@ fun DiaryScreen(nav: NavController) {
                                             isLast = idx == displayedEntries.lastIndex,
                                             settingsLmp = settings.lmp,
                                             dark = dark,
+                                            selection = selection,
                                             onClick = { edit(entry) },
                                             onDelete = { delete(entry) },
                                             onPreviewPhoto = { viewingPhoto = DiaryPhotoSelection(entry.photos, it) },
@@ -465,6 +484,7 @@ fun DiaryScreen(nav: NavController) {
                             filterRow()
                             Spacer(Modifier.height(6.dp))
                         }
+                        stickyHeader("diary-multiselect") { selectionBar() }
                         if (displayedEntries.isEmpty()) {
                             item {
                                 Box(Modifier.padding(horizontal = 14.dp)) {
@@ -484,6 +504,7 @@ fun DiaryScreen(nav: NavController) {
                                         isLast = idx == displayedEntries.lastIndex,
                                         settingsLmp = settings.lmp,
                                         dark = dark,
+                                        selection = selection,
                                         onClick = { edit(entry) },
                                         onDelete = { delete(entry) },
                                         onPreviewPhoto = { viewingPhoto = DiaryPhotoSelection(entry.photos, it) },
@@ -494,7 +515,7 @@ fun DiaryScreen(nav: NavController) {
                     }
                 }
 
-                if (displayedEntries.isNotEmpty()) {
+                if (displayedEntries.isNotEmpty() && !selection.active) {
                     DiaryWriteFab(
                         onClick = { nav.navigate(Routes.diaryEdit(date = selectedDay)) },
                         modifier = Modifier
@@ -758,7 +779,7 @@ private fun DiaryFilterBar(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun DiaryTimelineRow(
     entry: DiaryEntry,
@@ -767,6 +788,7 @@ private fun DiaryTimelineRow(
     isLast: Boolean,
     settingsLmp: LocalDate?,
     dark: Boolean,
+    selection: RecordSelection,
     onClick: () -> Unit,
     onDelete: () -> Unit,
     onPreviewPhoto: (Int) -> Unit,
@@ -775,6 +797,12 @@ private fun DiaryTimelineRow(
     val date = entry.date.toDate()
     val week = settingsLmp?.let { PregnancyInfo(it, date).gestationAt(date) }?.takeIf { it.isNotBlank() } ?: "20+5"
     val lineColor = colors.outline
+    val openOrSelect = { if (selection.active) selection.toggle(entry.id) else onClick() }
+    val haptics = LocalHapticFeedback.current
+    val enterSelection: () -> Unit = {
+        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        selection.beginWith(entry.id)
+    }
 
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
         // Left timeline axis + date column
@@ -827,7 +855,10 @@ private fun DiaryTimelineRow(
             Column(
                 Modifier
                     .padding(start = 15.dp)
-                    .clickable { onClick() },
+                    .combinedClickable(
+                        onClick = openOrSelect,
+                        onLongClick = enterSelection,
+                    ),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 DiaryText(
@@ -860,15 +891,16 @@ private fun DiaryTimelineRow(
                 entry = entry,
                 index = index,
                 dark = dark,
-                onClick = onClick,
+                onClick = openOrSelect,
                 onDelete = onDelete,
-                onPreviewPhoto = onPreviewPhoto,
+                onPreviewPhoto = { if (selection.active) selection.toggle(entry.id) else onPreviewPhoto(it) },
+                selection = selection,
             )
         }
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun DiaryTimelineCard(
     entry: DiaryEntry,
@@ -877,6 +909,7 @@ private fun DiaryTimelineCard(
     onClick: () -> Unit,
     onDelete: (() -> Unit)?,
     onPreviewPhoto: (Int) -> Unit,
+    selection: RecordSelection? = null,
 ) {
     val colors = LocalDiaryColors.current
     val shape = RoundedCornerShape(20.dp)
@@ -891,10 +924,17 @@ private fun DiaryTimelineCard(
         entry.mood.contains("疲惫") -> R.drawable.diary_mood_tired
         else -> moodDrawable(entry.mood)
     }
+    val haptics = LocalHapticFeedback.current
+    val enterSelection: (() -> Unit)? = selection?.let { sel -> {
+        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        sel.beginWith(entry.id)
+    } }
 
     Surface(
-        onClick = onClick,
-        modifier = Modifier.diaryCardShadow(shape),
+        modifier = Modifier.diaryCardShadow(shape).combinedClickable(
+            onClick = onClick,
+            onLongClick = enterSelection,
+        ),
         shape = shape,
         color = colors.card,
         border = BorderStroke(1.dp, colors.outline.copy(alpha = 0.55f)),
@@ -1017,7 +1057,9 @@ private fun DiaryTimelineCard(
                 }
             }
 
-            if (onDelete != null) {
+            if (selection?.active == true) {
+                Box(Modifier.align(Alignment.TopEnd)) { RecordSelectionMark(selection, entry.id, "日记") }
+            } else if (onDelete != null) {
                 RecordActionsMenu(
                     recordName = "日记",
                     deleteMessage = "删除后无法恢复，确定删除吗？",

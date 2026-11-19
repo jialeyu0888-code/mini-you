@@ -2,10 +2,12 @@ package com.miniyou.app.ui.checkup
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -207,11 +209,13 @@ internal fun PrenatalButton(label: String, onClick: () -> Unit, modifier: Modifi
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun PrenatalCard(
     modifier: Modifier = Modifier,
     color: Color = LocalPrenatalColors.current.card,
     onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
     contentPadding: PaddingValues = PaddingValues(14.dp),
     border: BorderStroke? = null,
     content: @Composable () -> Unit,
@@ -226,8 +230,13 @@ internal fun PrenatalCard(
     }
     if (onClick == null) {
         Surface(modifier = mod, shape = shape, color = color, border = border, content = inner)
-    } else {
+    } else if (onLongClick == null) {
         Surface(onClick = onClick, modifier = mod, shape = shape, color = color, border = border, content = inner)
+    } else {
+        Surface(
+            modifier = mod.combinedClickable(onClick = onClick, onLongClick = onLongClick),
+            shape = shape, color = color, border = border, content = inner,
+        )
     }
 }
 

@@ -3,6 +3,8 @@ package com.miniyou.app.ui.shopping
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,6 +37,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,6 +50,9 @@ import com.miniyou.app.data.db.ShoppingStatus
 import com.miniyou.app.ui.AppScaffold
 import com.miniyou.app.ui.Routes
 import com.miniyou.app.ui.components.RecordActionsMenu
+import com.miniyou.app.ui.components.RecordSelection
+import com.miniyou.app.ui.components.RecordSelectionMark
+import com.miniyou.app.ui.components.rememberRecordSelection
 import com.miniyou.app.ui.components.app
 import com.miniyou.app.ui.theme.LocalWindowLayout
 import kotlinx.coroutines.launch
@@ -59,7 +66,7 @@ fun ShoppingBoardScreen(nav: NavController) {
         val marks = rememberShoppingMarks()
         val favorites by marks.favorites.collectAsState()
         val bought = items.filter { it.status == ShoppingStatus.BOUGHT }
-        val open = items.filter { it.status != ShoppingStatus.BOUGHT }
+        val open = items.filter { it.status != ShoppingStatus.BOUGHT && it.status != ShoppingStatus.CLOSED }
         val spent = bought.sumOf { it.total }
         val budget = open.sumOf { it.total }
         AppScaffold(containerColor = colors.paper) { pad ->
@@ -151,6 +158,7 @@ fun ShoppingChecklistScreen(nav: NavController) {
         val colors = LocalShopColors.current
         val app = app()
         val scope = rememberCoroutineScope()
+        val selection = rememberRecordSelection()
         val layout = LocalWindowLayout.current
         val items by app.db.shopping().all().collectAsState(initial = emptyList())
         val categories by app.db.shopping().categories().collectAsState(initial = emptyList())
@@ -158,7 +166,7 @@ fun ShoppingChecklistScreen(nav: NavController) {
         var manage by remember { mutableStateOf(false) }
         var qtyFor by remember { mutableStateOf<ShoppingItem?>(null) }
         var boughtName by remember { mutableStateOf<String?>(null) }
-        val open = items.filter { it.status != ShoppingStatus.BOUGHT }
+        val open = items.filter { it.status != ShoppingStatus.BOUGHT && it.status != ShoppingStatus.CLOSED }
         val names = listOf("全部") + categories.map { it.name }.ifEmpty { open.map { it.category }.distinct() }
         val shown = if (filter == "全部") open else open.filter { it.category == filter }
         val groups = shown.groupBy { it.category.ifBlank { "其他" } }
@@ -171,6 +179,7 @@ fun ShoppingChecklistScreen(nav: NavController) {
                         ShopText("购物清单", 18, colors.ink, weight = FontWeight.Bold, modifier = Modifier.weight(1f), center = true)
                         Icon(Icons.Outlined.MoreHoriz, "管理分类", tint = colors.ink, modifier = Modifier.padding(start = 8.dp).clickable { manage = true })
                     }
+                    Box(Modifier.padding(horizontal = 12.dp)) { ShoppingSelectionBar(selection, shown) }
                     Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = 8.dp)) {
                         Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
@@ -195,7 +204,7 @@ fun ShoppingChecklistScreen(nav: NavController) {
                                         .clip(RoundedCornerShape(16.dp))
                                         .background(if (on) colors.button else colors.card)
                                         .border(1.dp, if (on) colors.button else colors.line, RoundedCornerShape(16.dp))
-                                        .clickable { filter = name }
+                                        .clickable { if (!selection.busy) { selection.stop(); filter = name } }
                                         .padding(horizontal = 12.dp, vertical = 7.dp),
                                 )
                             }
@@ -224,6 +233,7 @@ fun ShoppingChecklistScreen(nav: NavController) {
                                             ChecklistRow(
                                                 item = item,
                                                 nav = nav,
+                                                selection = selection,
                                                 onCheck = {
                                                     scope.launch {
                                                         app.db.shopping().upsert(item.copy(status = ShoppingStatus.BOUGHT, updatedAt = System.currentTimeMillis()))
@@ -245,7 +255,7 @@ fun ShoppingChecklistScreen(nav: NavController) {
                             }
                         }
                     }
-                    PinkButton(
+                    if (!selection.active) PinkButton(
                         "添加物品",
                         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                     ) { nav.navigate(Routes.shoppingEdit()) }
@@ -263,28 +273,36 @@ fun ShoppingChecklistScreen(nav: NavController) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ChecklistRow(
     item: ShoppingItem,
     nav: NavController,
+    selection: RecordSelection,
     onCheck: () -> Unit,
     onQty: () -> Unit,
     onDelta: (Int) -> Unit,
 ) {
     val colors = LocalShopColors.current
-    val open = { nav.navigate(Routes.shoppingDetail(item.id)) }
+    val haptics = LocalHapticFeedback.current
+    val open = { if (selection.active) selection.toggle(item.id) else nav.navigate(Routes.shoppingDetail(item.id)) }
+    val enterSelection: () -> Unit = {
+        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        selection.beginWith(item.id)
+    }
     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        ShopCheck(false, onCheck)
+        if (selection.active) RecordSelectionMark(selection, item.id, "商品")
+        else ShopCheck(false, onCheck)
         Spacer(Modifier.width(8.dp))
-        Box(Modifier.clickable(onClick = open)) { ShopThumb(item, Modifier.size(46.dp)) }
+        Box(Modifier.combinedClickable(onClick = open, onLongClick = enterSelection)) { ShopThumb(item, Modifier.size(46.dp)) }
         Spacer(Modifier.width(8.dp))
-        Column(Modifier.weight(1f).clickable(onClick = open)) {
+        Column(Modifier.weight(1f).combinedClickable(onClick = open, onLongClick = enterSelection)) {
             ShopText(item.name, 14, colors.ink, weight = FontWeight.Bold, maxLines = 1)
             ShopText(item.category, 11, colors.secondary, maxLines = 1)
             ShopText(item.price?.let(::money) ?: "待估价", 13, colors.accent, weight = FontWeight.Bold)
             if (item.status == ShoppingStatus.DECIDED) TagChip("决定未买")
         }
-        Column(horizontalAlignment = Alignment.End) {
+        if (!selection.active) Column(horizontalAlignment = Alignment.End) {
             key(item.id) { ShoppingItemActions(item, nav) }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 StepperButton("−") { onDelta(-1) }
@@ -301,12 +319,15 @@ private fun ChecklistRow(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ShoppingBoughtScreen(nav: NavController) {
     ShopTheme {
         val colors = LocalShopColors.current
         val items by app().db.shopping().all().collectAsState(initial = emptyList())
         val bought = items.filter { it.status == ShoppingStatus.BOUGHT }
+        val selection = rememberRecordSelection()
+        val haptics = LocalHapticFeedback.current
         AppScaffold(containerColor = colors.paper) { pad ->
             Box(Modifier.fillMaxSize().padding(pad)) {
                 ShopPaper(Modifier.matchParentSize())
@@ -316,6 +337,7 @@ fun ShoppingBoughtScreen(nav: NavController) {
                         ShopText("已购买", 18, colors.ink, weight = FontWeight.Bold, modifier = Modifier.weight(1f), center = true)
                         Spacer(Modifier.width(24.dp))
                     }
+                    ShoppingSelectionBar(selection, bought)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             ShopText("已购买", 26, colors.ink, weight = FontWeight.Bold)
@@ -335,7 +357,15 @@ fun ShoppingBoughtScreen(nav: NavController) {
                                 .clip(RoundedCornerShape(18.dp))
                                 .background(colors.card)
                                 .border(1.dp, colors.line, RoundedCornerShape(18.dp))
-                                .clickable { nav.navigate(Routes.shoppingDetail(item.id)) }
+                                .combinedClickable(
+                                    onClick = {
+                                        if (selection.active) selection.toggle(item.id) else nav.navigate(Routes.shoppingDetail(item.id))
+                                    },
+                                    onLongClick = {
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        selection.beginWith(item.id)
+                                    },
+                                )
                                 .padding(10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -349,7 +379,8 @@ fun ShoppingBoughtScreen(nav: NavController) {
                                 )
                             }
                             ShopText("已买", 12, colors.accent, weight = FontWeight.Bold)
-                            key(item.id) { ShoppingItemActions(item, nav, Modifier.align(Alignment.Top)) }
+                            if (selection.active) RecordSelectionMark(selection, item.id, "商品")
+                            else key(item.id) { ShoppingItemActions(item, nav, Modifier.align(Alignment.Top)) }
                         }
                     }
                 }

@@ -7,6 +7,8 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,11 +63,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.room.withTransaction
 import com.miniyou.app.MiniYouApp
 import com.miniyou.app.ai.AiException
 import com.miniyou.app.data.db.CheckinItem
@@ -80,6 +85,10 @@ import com.miniyou.app.ui.components.ConfirmDialog
 import com.miniyou.app.ui.components.MessageDialog
 import com.miniyou.app.ui.components.SoftCard
 import com.miniyou.app.ui.components.RecordActionsMenu
+import com.miniyou.app.ui.components.RecordSelection
+import com.miniyou.app.ui.components.RecordSelectionBar
+import com.miniyou.app.ui.components.RecordSelectionMark
+import com.miniyou.app.ui.components.rememberRecordSelection
 import com.miniyou.app.ui.components.TimePickerDialog
 import com.miniyou.app.ui.components.app
 import com.miniyou.app.ui.components.minutesLabel
@@ -87,6 +96,8 @@ import com.miniyou.app.ui.components.rememberPhotoPicker
 import com.miniyou.app.ui.theme.LocalWindowLayout
 import com.miniyou.app.ui.theme.Mint
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
 suspend fun toggleCheckin(app: MiniYouApp, itemId: Long, date: LocalDate) {
@@ -112,18 +123,20 @@ fun CheckinScreen(onBack: () -> Unit) {
     val items by app.db.checkin().items().collectAsState(initial = emptyList())
     val records by app.db.checkin().records().collectAsState(initial = emptyList())
     val scope = rememberCoroutineScope()
+    val selection = rememberRecordSelection()
     val layout = LocalWindowLayout.current
     val today = LocalDate.now()
     val byItem = remember(records) { records.groupBy { it.itemId }.mapValues { e -> e.value.map(CheckinRecord::date).toSet() } }
     var editing by remember { mutableStateOf<CheckinItem?>(null) }
     var deleting by remember { mutableStateOf<CheckinItem?>(null) }
     BackHandler(enabled = editing != null) { editing = null }
-    fun delete(item: CheckinItem) {
-        scope.launch {
-            app.db.checkin().deleteWithRecords(item)
-            Reminders.cancelCheckin(context, item.id)
+    suspend fun deleteItems(selected: List<CheckinItem>) = withContext(NonCancellable) {
+        app.db.withTransaction {
+            selected.forEach { app.db.checkin().deleteWithRecords(it) }
         }
+        selected.forEach { Reminders.cancelCheckin(context, it.id) }
     }
+    fun delete(item: CheckinItem) { scope.launch { deleteItems(listOf(item)) } }
 
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     fun ensureNotify() {
@@ -150,7 +163,9 @@ fun CheckinScreen(onBack: () -> Unit) {
             },
         )
     } else {
-    AppScaffold(containerColor = colors.paper, topBar = { BackTopBar("每日打卡", onBack, containerColor = colors.paper) }) { pad ->
+    AppScaffold(containerColor = colors.paper, topBar = {
+        BackTopBar("每日打卡", { if (selection.active) { if (!selection.busy) selection.stop() } else onBack() }, containerColor = colors.paper)
+    }) { pad ->
         val weekStart = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
         val weekDays = (0..6).map { weekStart.plusDays(it.toLong()).toEpochDay() }
         val finishedDays = weekDays.count { day -> items.any { day in (byItem[it.id] ?: emptySet()) } }
@@ -175,6 +190,9 @@ fun CheckinScreen(onBack: () -> Unit) {
                     )
                 }
             }
+            RecordSelectionBar(
+                selection, items.map { it.id }, "打卡项及其记录", Modifier.padding(horizontal = 14.dp),
+            ) { ids -> deleteItems(items.filter { it.id in ids }) }
             LazyVerticalGrid(
                 columns = GridCells.Fixed(layout.gridColumns),
                 modifier = Modifier.weight(1f),
@@ -185,7 +203,7 @@ fun CheckinScreen(onBack: () -> Unit) {
                 items(items, key = { it.id }) { item ->
                     val days = byItem[item.id] ?: emptySet()
                     CheckinCard(
-                        item = item, days = days, today = today,
+                        item = item, days = days, today = today, selection = selection,
                         onToggle = {
                             scope.launch {
                                 val wasDone = today.toEpochDay() in days
@@ -197,12 +215,12 @@ fun CheckinScreen(onBack: () -> Unit) {
                                 if (allDone && items.isNotEmpty()) celebrate = true
                             }
                         },
-                        onEdit = { editing = item },
+                        onEdit = { if (selection.active) selection.toggle(item.id) else editing = item },
                         onDelete = { delete(item) },
                     )
                 }
             }
-            com.miniyou.app.ui.checkup.PrenatalButton(
+            if (!selection.active) com.miniyou.app.ui.checkup.PrenatalButton(
                 "＋  新增打卡项",
                 { editing = CheckinItem(id = 0, name = "", sortOrder = items.size) },
                 Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -237,30 +255,43 @@ fun CheckinScreen(onBack: () -> Unit) {
 
 private fun deleteCheckinMessage(item: CheckinItem) = "确定删除「${item.name}」及其全部打卡记录吗？"
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun CheckinCard(
     item: CheckinItem,
     days: Set<Long>,
     today: LocalDate,
+    selection: RecordSelection,
     onToggle: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val colors = com.miniyou.app.ui.checkup.LocalPrenatalColors.current
+    val haptics = LocalHapticFeedback.current
     val done = today.toEpochDay() in days
     val streak = streakOf(days, today.toEpochDay())
+    val open = { if (selection.active) selection.toggle(item.id) else onEdit() }
+    val enterSelection: () -> Unit = {
+        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        selection.beginWith(item.id)
+    }
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(40.dp).clip(CircleShape).background(colors.accentSoft).clickable(onClick = onEdit), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(40.dp).clip(CircleShape).background(colors.accentSoft).clickable(onClick = open), contentAlignment = Alignment.Center) {
             Text(item.emoji, fontSize = 20.sp)
         }
-        Column(Modifier.padding(start = 10.dp).weight(1f).clickable(onClick = onEdit)) {
+        Column(
+            Modifier.padding(start = 10.dp).weight(1f).combinedClickable(
+                onClick = open,
+                onLongClick = enterSelection,
+            ),
+        ) {
             Text(item.name, color = colors.ink, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Text(
                 "连续 $streak 天" + if (item.reminderEnabled) " · ${minutesLabel(item.reminderMinutes)}" else "",
                 color = colors.muted, fontSize = 12.sp,
             )
         }
-        Box(
+        if (!selection.active) Box(
             Modifier.size(30.dp).clip(CircleShape)
                 .background(if (done) colors.accent else colors.card)
                 .clickable(onClick = onToggle),
@@ -269,7 +300,8 @@ private fun CheckinCard(
             if (done) Text("✓", color = colors.onAccent, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             else Text("○", color = colors.accent, fontSize = 18.sp)
         }
-        RecordActionsMenu(
+        if (selection.active) RecordSelectionMark(selection, item.id, "打卡项")
+        else RecordActionsMenu(
             "打卡项", deleteCheckinMessage(item),
             onEdit = onEdit, onDelete = onDelete,
             modifier = Modifier.align(Alignment.Top), tint = colors.muted,

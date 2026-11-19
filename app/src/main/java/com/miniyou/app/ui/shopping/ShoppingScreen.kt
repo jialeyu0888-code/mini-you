@@ -3,6 +3,8 @@ package com.miniyou.app.ui.shopping
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +29,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -39,6 +42,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -48,18 +53,23 @@ import com.miniyou.app.data.db.ShoppingStatus
 import com.miniyou.app.ui.AppScaffold
 import com.miniyou.app.ui.Routes
 import com.miniyou.app.ui.components.RecordActionsMenu
+import com.miniyou.app.ui.components.RecordSelection
+import com.miniyou.app.ui.components.RecordSelectionBar
+import com.miniyou.app.ui.components.RecordSelectionMark
+import com.miniyou.app.ui.components.rememberRecordSelection
 import com.miniyou.app.ui.components.app
 import kotlinx.coroutines.launch
 
 private const val FAVORITES = -1
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ShoppingScreen(nav: NavController, focus: String = "") {
     ShopTheme {
         val colors = LocalShopColors.current
         val app = app()
         val items by app.db.shopping().all().collectAsState(initial = emptyList())
-        val settings by app.settings.state.collectAsState()
+        val selection = rememberRecordSelection()
         val favorites by rememberShoppingMarks().favorites.collectAsState()
         var status by rememberSaveable(focus) {
             mutableIntStateOf(when (focus) {
@@ -76,6 +86,7 @@ fun ShoppingScreen(nav: NavController, focus: String = "") {
         val bought = byStatus[ShoppingStatus.BOUGHT].orEmpty()
         val decided = byStatus[ShoppingStatus.DECIDED].orEmpty()
         val planned = byStatus[ShoppingStatus.PLANNED].orEmpty()
+        val closed = byStatus[ShoppingStatus.CLOSED].orEmpty()
         val shown = when (status) {
             FAVORITES -> items.filter { it.id in favorites }
             else -> byStatus[status].orEmpty()
@@ -93,11 +104,13 @@ fun ShoppingScreen(nav: NavController, focus: String = "") {
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Column(Modifier.weight(1f)) {
-                                ShopText("购物账本", 26, colors.ink, weight = FontWeight.Bold)
-                                ShopText("消费与预算", 12, colors.secondary)
+                                ShopText("商品清单", 26, colors.ink, weight = FontWeight.Bold)
                             }
                             Button(
-                                onClick = { nav.navigate(Routes.shoppingEdit(status = status.coerceAtLeast(0))) },
+                                onClick = {
+                                    val initialStatus = if (status == ShoppingStatus.CLOSED) ShoppingStatus.PLANNED else status.coerceAtLeast(0)
+                                    nav.navigate(Routes.shoppingEdit(status = initialStatus))
+                                },
                                 colors = ButtonDefaults.buttonColors(containerColor = colors.button, contentColor = colors.onButton),
                             ) {
                                 Icon(Icons.Default.Add, null, Modifier.size(18.dp))
@@ -133,33 +146,22 @@ fun ShoppingScreen(nav: NavController, focus: String = "") {
                             }
                         }
                     }
-                    item("spending") { SpendingOverview(bought) }
-                    item("budget") {
-                        BudgetPreview(
-                            spent = bought.amounts(),
-                            decided = decided,
-                            planned = planned,
-                            budget = settings.shoppingBudget?.toBigDecimalOrNull(),
-                            onBudgetChanged = { amount ->
-                                app.settings.update { it.copy(shoppingBudget = amount?.toPlainString()) }
-                            },
-                        )
-                    }
-                    item("items-header") {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            ShopText(
-                                if (status == FAVORITES) "我的收藏" else "商品清单",
-                                20, colors.ink, weight = FontWeight.Bold,
-                            )
-                            StatusTabs(status, bought.size, decided.size, planned.size) { status = it }
-                            val amounts = shown.amounts()
-                            if (shown.isNotEmpty() && status != FAVORITES) {
-                                val label = if (status == ShoppingStatus.BOUGHT) "已记录实付" else "已估价小计"
-                                ShopText(
-                                    "$label ${ledgerMoney(amounts.total)}" +
-                                        if (amounts.unpriced == 0) "" else "  ·  ${amounts.unpriced} 项缺少金额",
-                                    12, colors.secondary,
-                                )
+                    stickyHeader("items-header") {
+                        Column(Modifier.fillMaxWidth().background(colors.paper)) {
+                            StatusTabs(status, bought.size, decided.size, planned.size, closed.size) {
+                                if (!selection.busy) {
+                                    selection.stop()
+                                    status = it
+                                }
+                            }
+                            if (status == FAVORITES) ShopText("我的收藏", 16, colors.ink, weight = FontWeight.Bold)
+                            if (selection.active) {
+                                ShoppingSelectionBar(selection, shown)
+                            } else {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    TextButton(onClick = { nav.navigate(Routes.SHOPPING_ANALYSIS) }) { Text("消费分析") }
+                                    Box(Modifier.weight(1f)) { ShoppingSelectionBar(selection, shown) }
+                                }
                             }
                         }
                     }
@@ -170,6 +172,7 @@ fun ShoppingScreen(nav: NavController, focus: String = "") {
                                     ShoppingStatus.BOUGHT -> "还没有已购记录。添加商品即可记下实付金额。"
                                     ShoppingStatus.DECIDED -> "确定要买的商品可以放在这里，方便估算预算。"
                                     ShoppingStatus.PLANNED -> "想买的商品可以先记在这里，之后再决定。"
+                                    ShoppingStatus.CLOSED -> "暂无关闭的订单。"
                                     else -> "在商品详情里点爱心，即可加入收藏。"
                                 },
                                 13, colors.secondary, modifier = Modifier.padding(vertical = 8.dp),
@@ -177,7 +180,7 @@ fun ShoppingScreen(nav: NavController, focus: String = "") {
                         }
                     }
                     items(shown, key = { it.id }) { item ->
-                        LedgerItemRow(item, nav)
+                        LedgerItemRow(item, nav, selection)
                     }
                     item("bottom-space") { Box(Modifier.padding(bottom = 8.dp)) }
                 }
@@ -193,14 +196,16 @@ private fun StatusTabs(
     bought: Int,
     decided: Int,
     planned: Int,
+    closed: Int,
     onSelect: (Int) -> Unit,
 ) {
     val colors = LocalShopColors.current
-    val options = listOf(
-        Triple(ShoppingStatus.BOUGHT, "已购买", bought),
-        Triple(ShoppingStatus.DECIDED, "已决定未买", decided),
-        Triple(ShoppingStatus.PLANNED, "计划购买", planned),
-    )
+    val options = buildList {
+        add(Triple(ShoppingStatus.BOUGHT, "已购买", bought))
+        add(Triple(ShoppingStatus.DECIDED, "已决定未买", decided))
+        add(Triple(ShoppingStatus.PLANNED, "计划购买", planned))
+        if (closed > 0 || selected == ShoppingStatus.CLOSED) add(Triple(ShoppingStatus.CLOSED, "交易关闭", closed))
+    }
     Row(
         Modifier.fillMaxWidth().selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -225,12 +230,30 @@ private fun StatusTabs(
 }
 
 @Composable
-private fun LedgerItemRow(item: ShoppingItem, nav: NavController) {
+internal fun ShoppingSelectionBar(selection: RecordSelection, items: List<ShoppingItem>) {
+    val dao = app().db.shopping()
+    RecordSelectionBar(selection, items.map { it.id }, "商品") { ids ->
+        dao.deleteMany(items.filter { it.id in ids })
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun LedgerItemRow(item: ShoppingItem, nav: NavController, selection: RecordSelection) {
     val colors = LocalShopColors.current
+    val haptics = LocalHapticFeedback.current
     val shape = RoundedCornerShape(16.dp)
     Row(
         Modifier.fillMaxWidth().clip(shape).background(colors.card)
-            .border(1.dp, colors.line, shape).clickable { nav.navigate(Routes.shoppingDetail(item.id)) }
+            .border(1.dp, colors.line, shape).combinedClickable(
+                onClick = {
+                    if (selection.active) selection.toggle(item.id) else nav.navigate(Routes.shoppingDetail(item.id))
+                },
+                onLongClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    selection.beginWith(item.id)
+                },
+            )
             .padding(horizontal = 10.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -238,7 +261,8 @@ private fun LedgerItemRow(item: ShoppingItem, nav: NavController) {
         ShopThumb(item, Modifier.size(52.dp))
         Column(Modifier.weight(1f)) {
             ShopText(item.name, 14, colors.ink, weight = FontWeight.Bold, maxLines = 2)
-            ShopText("${item.ledgerCategory()}  ·  × ${item.quantity}", 11, colors.secondary, maxLines = 1)
+            ShopText(listOfNotNull(item.brand.takeIf { it.isNotBlank() }, item.ledgerCategory(), "× ${item.quantity}")
+                .joinToString("  ·  "), 11, colors.secondary, maxLines = 1)
         }
         Column(horizontalAlignment = Alignment.End) {
             ShopText(
@@ -246,10 +270,16 @@ private fun LedgerItemRow(item: ShoppingItem, nav: NavController) {
                 14, colors.ink, weight = FontWeight.SemiBold,
             )
             if (item.recordedAmount != null) {
-                ShopText(if (item.status == ShoppingStatus.BOUGHT) "实付" else "预计", 11, colors.secondary)
+                val amountLabel = when (item.status) {
+                    ShoppingStatus.BOUGHT -> "实付"
+                    ShoppingStatus.CLOSED -> "商品金额"
+                    else -> "预计"
+                }
+                ShopText(amountLabel, 11, colors.secondary)
             }
         }
-        ShoppingItemActions(item, nav, Modifier.align(Alignment.Top))
+        if (selection.active) RecordSelectionMark(selection, item.id, "商品")
+        else ShoppingItemActions(item, nav, Modifier.align(Alignment.Top))
     }
 }
 

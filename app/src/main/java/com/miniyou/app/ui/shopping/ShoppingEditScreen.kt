@@ -86,6 +86,7 @@ import com.miniyou.app.ui.components.rememberPhotoPicker
 import com.miniyou.app.ui.theme.ContentWidth
 import com.miniyou.app.ui.theme.LocalWindowLayout
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
 
 val Channels = listOf("淘宝", "天猫", "京东", "拼多多", "抖音", "小红书", "母婴店", "超市", "亲友赠送")
 
@@ -101,6 +102,8 @@ data class BatchLine(
     val channel: String,
     val note: String,
     val photo: String?,
+    val brand: String = "",
+    val productUrl: String = "",
 )
 
 class ShoppingEditVM(private val app: MiniYouApp, private val id: Long, initialStatus: Int, autoAi: Boolean) : ViewModel() {
@@ -112,8 +115,12 @@ class ShoppingEditVM(private val app: MiniYouApp, private val id: Long, initialS
     var quantity by mutableStateOf("1")
     var channel by mutableStateOf("")
     var note by mutableStateOf("")
+    var brand by mutableStateOf("")
+    var productUrl by mutableStateOf("")
     var photo by mutableStateOf<String?>(null)
     private var existing by mutableStateOf<ShoppingItem?>(null)
+    val previousSpend: BigDecimal
+        get() = existing?.takeIf { it.status == ShoppingStatus.BOUGHT }?.recordedAmount ?: BigDecimal.ZERO
     val canDelete get() = existing != null
     val batch = mutableStateListOf<BatchLine>()
     private var nextKey = 1
@@ -130,6 +137,8 @@ class ShoppingEditVM(private val app: MiniYouApp, private val id: Long, initialS
                 category = i.category
                 price = i.price?.let(::fmt).orEmpty()
                 quantity = i.quantity.toString(); channel = i.channel; note = i.note; photo = i.photo
+                brand = i.brand
+                productUrl = i.productUrl
             }
         }
     }
@@ -186,6 +195,7 @@ class ShoppingEditVM(private val app: MiniYouApp, private val id: Long, initialS
         name = name.trim(), status = status, category = category, price = price.toDoubleOrNull(),
         quantity = quantity.toIntOrNull()?.coerceAtLeast(1) ?: 1, channel = channel.trim(), note = note.trim(),
         photo = photo, updatedAt = System.currentTimeMillis(),
+        brand = brand.trim(), productUrl = normalizedProductUrl(productUrl).orEmpty(),
     )
 
     suspend fun save() { app.db.shopping().upsert(current()) }
@@ -207,6 +217,8 @@ class ShoppingEditVM(private val app: MiniYouApp, private val id: Long, initialS
                 photo = line.photo,
                 createdAt = now,
                 updatedAt = now,
+                brand = line.brand.trim(),
+                productUrl = normalizedProductUrl(line.productUrl).orEmpty(),
             )
         }
         if (items.isEmpty()) throw AiException("没有可导入的商品")
@@ -230,6 +242,10 @@ fun ShoppingEditScreen(id: Long, status: Int, autoAi: Boolean = false, onDone: (
     val context = LocalContext.current
     val vm = viewModel(key = "shop-$id-$status-$autoAi") { ShoppingEditVM(app, id, status, autoAi) }
     val categories by app.db.shopping().categories().collectAsState(initial = emptyList())
+    val purchases by app.db.shopping().all().collectAsState(initial = null)
+    val spent = remember(purchases) {
+        purchases?.filter { it.status == ShoppingStatus.BOUGHT }?.amounts()?.total
+    }
     val scope = rememberCoroutineScope()
     val layout = LocalWindowLayout.current
     var addCat by remember { mutableStateOf(false) }
@@ -284,7 +300,11 @@ fun ShoppingEditScreen(id: Long, status: Int, autoAi: Boolean = false, onDone: (
                         ShopField("分类", vm.category, {}, readOnly = true, onClick = { pickCategory = true })
                         ShopText("新建分类", 12, colors.accent, modifier = Modifier.clickable { addCat = true })
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            val priceLabel = if (vm.status == ShoppingStatus.BOUGHT) "实付单价（元）" else "预计单价（元）"
+                            val priceLabel = when (vm.status) {
+                                ShoppingStatus.BOUGHT -> "实付单价（元）"
+                                ShoppingStatus.CLOSED -> "商品单价（元）"
+                                else -> "预计单价（元）"
+                            }
                             ShopField(priceLabel, vm.price, { vm.price = it.filter { c -> c.isDigit() || c == '.' } }, Modifier.weight(1f), KeyboardType.Decimal)
                             Column(Modifier.weight(1f)) {
                                 ShopText("数量", 12, colors.secondary)
@@ -301,6 +321,9 @@ fun ShoppingEditScreen(id: Long, status: Int, autoAi: Boolean = false, onDone: (
                                 }
                             }
                         }
+                        SpendingImpactHint(
+                            spent?.let { spendingImpact(it, vm.previousSpend, vm.status, vm.price, vm.quantity.toIntOrNull()?.coerceAtLeast(1) ?: 1) },
+                        )
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             ShoppingStatus.labels.forEachIndexed { i, label ->
                                 val on = vm.status == i
@@ -317,6 +340,12 @@ fun ShoppingEditScreen(id: Long, status: Int, autoAi: Boolean = false, onDone: (
                                 )
                             }
                         }
+                        ShopField("商品品牌", vm.brand, { vm.brand = it }, placeholder = "填写品牌（可选）")
+                        ShopField("商品链接", vm.productUrl, { vm.productUrl = it }, keyboard = KeyboardType.Uri,
+                            placeholder = "粘贴商品网页链接（可选）")
+                        if (normalizedProductUrl(vm.productUrl) == null) {
+                            ShopText("请输入有效的商品网页链接", 12, androidx.compose.material3.MaterialTheme.colorScheme.error)
+                        }
                         ShopField("备注（可选）", vm.note, { vm.note = it }, placeholder = "如：收纳尿布、湿巾等日常用品")
                         ShopField("购买渠道", vm.channel, { vm.channel = it }, placeholder = "淘宝 / 京东 / 母婴店")
                         PhotoStrip(listOfNotNull(vm.photo), onAdd = if (vm.photo == null) photoPick else null, onRemove = { vm.photo = null })
@@ -327,7 +356,9 @@ fun ShoppingEditScreen(id: Long, status: Int, autoAi: Boolean = false, onDone: (
                 Button(
                     onClick = save,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                    enabled = if (vm.batch.isNotEmpty()) batchCount > 0 else vm.name.isNotBlank(),
+                    enabled = if (vm.batch.isNotEmpty()) {
+                        batchCount > 0 && vm.batch.all { it.name.isBlank() || normalizedProductUrl(it.productUrl) != null }
+                    } else vm.name.isNotBlank() && normalizedProductUrl(vm.productUrl) != null,
                     colors = ButtonDefaults.buttonColors(containerColor = colors.button, contentColor = colors.onButton),
                 ) {
                     Text(if (vm.batch.isNotEmpty()) "导入全部 $batchCount 件" else "保存")
@@ -389,6 +420,29 @@ fun ShoppingEditScreen(id: Long, status: Int, autoAi: Boolean = false, onDone: (
     }
     if (vm.aiLoading) AiProgressDialog("AI 正在识别商品…")
     vm.aiError?.let { MessageDialog("识别失败", it) { vm.aiError = null } }
+    }
+}
+
+@Composable
+private fun SpendingImpactHint(impact: SpendingImpact?) {
+    val colors = LocalShopColors.current
+    if (impact == null) {
+        ShopText("输入单价后查看支出变化", 12, colors.secondary)
+        return
+    }
+    val change = when {
+        impact.change.signum() > 0 -> "+${ledgerMoney(impact.change)}"
+        impact.change.signum() < 0 -> "−${ledgerMoney(impact.change.abs())}"
+        else -> ledgerMoney(impact.change)
+    }
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(colors.pinkSoft).padding(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        ShopText("${if (impact.planned) "若购买增加" else "已花费变化"}  $change", 13,
+            colors.accent, weight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        ShopText("${if (impact.planned) "买后累计" else "保存后累计"}  ${ledgerMoney(impact.projected)}", 12,
+            colors.secondary, modifier = Modifier.weight(1f))
     }
 }
 
@@ -470,7 +524,13 @@ private fun BatchLineCard(
             )
         }
         Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        ShopField("商品品牌", line.brand, { onChange(line.copy(brand = it)) })
+        Spacer(Modifier.height(5.dp))
+        ShopField("商品链接", line.productUrl, { onChange(line.copy(productUrl = it)) }, keyboard = KeyboardType.Uri)
+        if (normalizedProductUrl(line.productUrl) == null) {
+            ShopText("请输入有效的商品网页链接", 12, androidx.compose.material3.MaterialTheme.colorScheme.error)
+        }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ShoppingStatus.labels.forEachIndexed { i, label ->
                 FilterChip(selected = line.status == i, onClick = { onChange(line.copy(status = i)) }, label = { Text(label) })
             }

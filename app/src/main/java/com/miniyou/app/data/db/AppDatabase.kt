@@ -67,6 +67,47 @@ private val MIGRATION_3_4 = object : Migration(3, 4) {
     }
 }
 
+private val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE `shopping_order_details` (
+                `shoppingId` INTEGER PRIMARY KEY NOT NULL,
+                `orderNumber` TEXT NOT NULL,
+                `orderLine` INTEGER NOT NULL,
+                `productId` TEXT NOT NULL,
+                `purchasedAt` INTEGER NOT NULL,
+                `orderState` TEXT NOT NULL,
+                `shop` TEXT NOT NULL,
+                `brand` TEXT NOT NULL,
+                `sku` TEXT NOT NULL,
+                `productUrl` TEXT NOT NULL,
+                `pregnancyProduct` INTEGER NOT NULL,
+                `itemAmountCents` INTEGER,
+                `orderPaidCents` INTEGER,
+                `orderShippingCents` INTEGER,
+                FOREIGN KEY(`shoppingId`) REFERENCES `shopping`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE TABLE `shopping_import_batches` (`id` TEXT PRIMARY KEY NOT NULL)")
+    }
+}
+
+private val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE shopping ADD COLUMN brand TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE shopping ADD COLUMN productUrl TEXT NOT NULL DEFAULT ''")
+        db.execSQL(
+            """
+            UPDATE shopping
+            SET brand = COALESCE((SELECT brand FROM shopping_order_details WHERE shoppingId = shopping.id), ''),
+                productUrl = COALESCE((SELECT productUrl FROM shopping_order_details WHERE shoppingId = shopping.id), '')
+            """.trimIndent()
+        )
+    }
+}
+
 private val MIGRATION_2_3 = object : Migration(2, 3) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL(
@@ -97,8 +138,9 @@ private val MIGRATION_2_3 = object : Migration(2, 3) {
         Checkup::class, DiaryEntry::class, ShoppingItem::class, ShoppingCategory::class,
         CheckinItem::class, CheckinRecord::class, BellyPhoto::class, MyRemedy::class, FavoriteMethod::class,
         CheckupPlan::class,
+        ShoppingOrderDetails::class, ShoppingImportBatch::class,
     ],
-    version = 4,
+    version = 6,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -114,7 +156,7 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         fun create(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, "miniyou.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .build()
     }
 }

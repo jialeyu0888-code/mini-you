@@ -1,8 +1,10 @@
 package com.miniyou.app
 
 import android.app.Application
+import android.util.Log
 import com.miniyou.app.ai.AiService
 import com.miniyou.app.data.CheckupPlans
+import com.miniyou.app.data.PrivateTaobaoOrders
 import com.miniyou.app.data.SettingsStore
 import com.miniyou.app.data.content.ContentRepository
 import com.miniyou.app.data.db.AppDatabase
@@ -10,6 +12,7 @@ import com.miniyou.app.data.db.CheckinItem
 import com.miniyou.app.data.db.ShoppingCategory
 import com.miniyou.app.notify.Reminders
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
@@ -40,6 +43,14 @@ class MiniYouApp : Application() {
         Reminders.createChannels(this)
         appScope.launch {
             seedDefaults()
+            // 仅在打包时内置了 private-taobao 资产的个人构建中生效；公开发布包缺资产时静默跳过
+            try {
+                PrivateTaobaoOrders.importOnce(this@MiniYouApp, db)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                Log.e("MiniYou", "Could not import bundled shopping orders", failure)
+            }
             Reminders.rescheduleAll(this@MiniYouApp)
         }
     }

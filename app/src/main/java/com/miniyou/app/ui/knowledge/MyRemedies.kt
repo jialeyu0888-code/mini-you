@@ -5,6 +5,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,6 +55,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -80,6 +84,10 @@ import com.miniyou.app.ui.components.DeleteRecordButton
 import com.miniyou.app.ui.components.EmptyState
 import com.miniyou.app.ui.components.MessageDialog
 import com.miniyou.app.ui.components.RecordActionsMenu
+import com.miniyou.app.ui.components.RecordSelection
+import com.miniyou.app.ui.components.RecordSelectionBar
+import com.miniyou.app.ui.components.RecordSelectionMark
+import com.miniyou.app.ui.components.rememberRecordSelection
 import com.miniyou.app.ui.components.app
 import com.miniyou.app.ui.components.rememberPhotoPicker
 import com.miniyou.app.ui.theme.ContentWidth
@@ -88,13 +96,21 @@ import kotlinx.coroutines.launch
 
 private fun ratingStars(r: Int) = "★".repeat(r.coerceIn(0, 2) + 1) + "☆".repeat(2 - r.coerceIn(0, 2))
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun MyRemedyCard(item: MyRemedy, onEdit: () -> Unit, onDelete: () -> Unit) {
+internal fun MyRemedyCard(item: MyRemedy, onEdit: () -> Unit, onDelete: () -> Unit, selection: RecordSelection? = null) {
     val colors = LocalKnowledgeColors.current
+    val haptics = LocalHapticFeedback.current
     val shape = RoundedCornerShape(24.dp)
+    val enterSelection: (() -> Unit)? = selection?.let { sel -> {
+        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        sel.beginWith(item.id)
+    } }
     Surface(
-        onClick = onEdit,
-        modifier = Modifier.knowledgeCardShadow(shape),
+        modifier = Modifier.knowledgeCardShadow(shape).combinedClickable(
+            onClick = { if (selection?.active == true) selection.toggle(item.id) else onEdit() },
+            onLongClick = enterSelection,
+        ),
         shape = shape,
         color = colors.card,
         border = BorderStroke(1.dp, colors.outline.copy(alpha = 0.55f)),
@@ -145,7 +161,8 @@ internal fun MyRemedyCard(item: MyRemedy, onEdit: () -> Unit, onDelete: () -> Un
                     )
                 }
             }
-            RecordActionsMenu(
+            if (selection?.active == true) RecordSelectionMark(selection, item.id, "攻略")
+            else RecordActionsMenu(
                 "攻略", "确定删除「${item.title}」吗？",
                 onEdit = onEdit, onDelete = onDelete,
                 modifier = Modifier.align(Alignment.Top), tint = colors.secondaryInk,
@@ -158,6 +175,7 @@ internal fun MyRemedyCard(item: MyRemedy, onEdit: () -> Unit, onDelete: () -> Un
 fun MyRemediesList(nav: NavController, content: RemedyContent, query: String) {
     val app = app()
     val scope = rememberCoroutineScope()
+    val selection = rememberRecordSelection()
     val layout = LocalWindowLayout.current
     val colors = LocalKnowledgeColors.current
     val mine by app.db.myRemedies().all().collectAsState(initial = emptyList())
@@ -183,6 +201,13 @@ fun MyRemediesList(nav: NavController, content: RemedyContent, query: String) {
                 onClick = { nav.navigate(Routes.myRemedyEdit(remedyId = AUTO_AI)) },
             )
         }
+        if (list.isNotEmpty() || selection.active) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                RecordSelectionBar(selection, list.map { it.id }, "攻略") { ids ->
+                    app.db.myRemedies().deleteMany(list.filter { it.id in ids })
+                }
+            }
+        }
         if (list.isEmpty() && favMethods.isEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 EmptyState("💗", "还没有你的专属攻略", "每个孕妈都不一样。试过有用的方法就记下来，或在「缓解攻略」里把有效的方法标记为 ♥")
@@ -203,6 +228,7 @@ fun MyRemediesList(nav: NavController, content: RemedyContent, query: String) {
                     remedy,
                     onEdit = { nav.navigate(Routes.myRemedyEdit(remedy.id)) },
                     onDelete = { scope.launch { app.db.myRemedies().delete(remedy) } },
+                    selection = selection,
                 )
             }
         }

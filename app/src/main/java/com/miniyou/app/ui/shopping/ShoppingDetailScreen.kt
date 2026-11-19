@@ -22,6 +22,8 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconToggleButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -33,17 +35,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.miniyou.app.data.db.ShoppingStatus
+import com.miniyou.app.data.db.ShoppingOrderDetails
 import com.miniyou.app.ui.AppScaffold
 import com.miniyou.app.ui.Routes
 import com.miniyou.app.ui.components.BackTopBar
 import com.miniyou.app.ui.components.app
 import com.miniyou.app.ui.theme.ContentWidth
 import java.io.File
+import java.math.BigDecimal
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.launch
 
 @Composable
@@ -53,6 +61,7 @@ fun ShoppingDetailScreen(id: Long, nav: NavController) {
         val app = app()
         val scope = rememberCoroutineScope()
         val item by app.db.shopping().observe(id).collectAsState(initial = null)
+        val order by app.db.shopping().observeOrderDetails(id).collectAsState(initial = null)
         val marks = rememberShoppingMarks()
         val favorites by marks.favorites.collectAsState()
         val current = item
@@ -88,7 +97,10 @@ fun ShoppingDetailScreen(id: Long, nav: NavController) {
                         ) {
                             val photo = current.photo
                             if (!photo.isNullOrBlank()) {
-                                AsyncImage(File(photo), current.name, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                                AsyncImage(
+                                    File(photo), current.name, Modifier.fillMaxSize(),
+                                    contentScale = if (order == null) ContentScale.Crop else ContentScale.Fit,
+                                )
                             } else {
                                 ShopArt(shopArt(current), current.name, Modifier.size(180.dp))
                             }
@@ -106,23 +118,33 @@ fun ShoppingDetailScreen(id: Long, nav: NavController) {
                         }
                         Spacer(Modifier.height(8.dp))
                         val isBought = current.status == ShoppingStatus.BOUGHT
+                        val isClosed = current.status == ShoppingStatus.CLOSED
                         ShopText(
-                            current.recordedAmount?.let { ledgerMoney(it) } ?: if (isBought) "未记金额" else "待估价",
+                            current.recordedAmount?.let(::ledgerMoney) ?: if (isBought || isClosed) "未记金额" else "待估价",
                             26, colors.accent, weight = FontWeight.Bold,
                         )
                         current.price?.let { unitPrice ->
                             if (current.recordedAmount != null) {
                                 ShopText(
-                                    "${if (isBought) "实付合计" else "预计合计"} · ${money(unitPrice)} × ${current.quantity}",
+                                    "${when { isBought -> "实付合计"; isClosed -> "商品金额"; else -> "预计合计" }} · ${money(unitPrice)} × ${current.quantity}",
                                     12, colors.secondary,
                                 )
                             }
                         }
                         Spacer(Modifier.height(8.dp))
-                        ShopText(
-                            current.note.ifBlank { "记下规格、尺码或为什么想买它。点右上角可以继续编辑。" },
-                            14, colors.secondary,
-                        )
+                        val details = order
+                        if (details != null) {
+                            TaobaoOrderDetails(details, current.brand, current.productUrl)
+                        } else {
+                            if (current.brand.isNotBlank()) ShopText("品牌  ${current.brand}", 14, colors.secondary)
+                            ProductLink(current.productUrl)
+                        }
+                        if (current.note.isNotBlank() || order == null) {
+                            ShopText(
+                                current.note.ifBlank { "记下规格、尺码或为什么想买它。点右上角可以继续编辑。" },
+                                14, colors.secondary,
+                            )
+                        }
                         Spacer(Modifier.height(16.dp))
                         ShopText("数量", 14, colors.ink, weight = FontWeight.Bold)
                         Spacer(Modifier.height(8.dp))
@@ -133,10 +155,10 @@ fun ShoppingDetailScreen(id: Long, nav: NavController) {
                         }
                         Spacer(Modifier.height(22.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            OutlineButton(if (isBought) "编辑商品" else "记录购买", Modifier.weight(1f)) {
+                            OutlineButton(if (isBought || isClosed) "编辑商品" else "记录购买", Modifier.weight(1f)) {
                                 nav.navigate(Routes.shoppingEdit(
                                     id = current.id,
-                                    status = if (isBought) ShoppingStatus.PLANNED else ShoppingStatus.BOUGHT,
+                                    status = if (isBought || isClosed) ShoppingStatus.PLANNED else ShoppingStatus.BOUGHT,
                                 ))
                             }
                             PinkButton("保存", Modifier.weight(1f)) {
@@ -152,4 +174,41 @@ fun ShoppingDetailScreen(id: Long, nav: NavController) {
             }
         }
     }
+}
+
+private val taobaoOrderDate = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+    .withZone(ZoneId.of("Asia/Shanghai"))
+
+@Composable
+private fun TaobaoOrderDetails(order: ShoppingOrderDetails, brand: String, productUrl: String) {
+    val colors = LocalShopColors.current
+    val fields = listOf(
+        "订单号" to order.orderNumber,
+        "下单时间" to taobaoOrderDate.format(Instant.ofEpochMilli(order.purchasedAt)),
+        "订单状态" to order.orderState,
+        "店铺" to order.shop,
+        "品牌" to brand,
+        "规格" to order.sku,
+        "是否孕期产品" to if (order.pregnancyProduct) "是" else "否",
+        "商品金额" to order.itemAmountCents?.let { ledgerMoney(BigDecimal.valueOf(it, 2)) }.orEmpty(),
+        "源表订单实付" to order.orderPaidCents?.let { ledgerMoney(BigDecimal.valueOf(it, 2)) }.orEmpty(),
+        "源表订单运费" to order.orderShippingCents?.let { ledgerMoney(BigDecimal.valueOf(it, 2)) }.orEmpty(),
+    )
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(colors.card).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        ShopText("淘宝订单", 15, colors.ink, weight = FontWeight.Bold)
+        fields.filter { it.second.isNotBlank() }.forEach { (label, value) ->
+            ShopText("$label  $value", 13, colors.secondary)
+        }
+        ProductLink(productUrl)
+    }
+}
+
+@Composable
+private fun ProductLink(url: String) {
+    if (url.isBlank()) return
+    val uriHandler = LocalUriHandler.current
+    TextButton(onClick = { runCatching { uriHandler.openUri(url) } }) { Text("打开商品链接") }
 }

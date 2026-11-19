@@ -27,8 +27,8 @@ android {
         applicationId = "com.miniyou.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 8
-        versionName = "0.2.6"
+        versionCode = 9
+        versionName = "0.2.7"
 
         buildConfigField("String", "ZHIPU_API_KEY", "\"${zhipuApiKey.replace("\"", "")}\"")
         buildConfigField("String", "ZHIPU_MODEL", "\"glm-5.3-flash\"")

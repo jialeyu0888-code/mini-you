@@ -1,6 +1,8 @@
 package com.miniyou.app.data.db
 
 import androidx.room.Entity
+import androidx.room.ColumnInfo
+import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
@@ -64,7 +66,8 @@ object ShoppingStatus {
     const val PLANNED = 0
     const val DECIDED = 1
     const val BOUGHT = 2
-    val labels = listOf("计划购买", "决定未买", "已购买")
+    const val CLOSED = 3
+    val labels = listOf("计划购买", "决定未买", "已购买", "交易关闭")
 }
 
 @Entity(tableName = "shopping")
@@ -80,9 +83,40 @@ data class ShoppingItem(
     val photo: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
+    @ColumnInfo(defaultValue = "''") val brand: String = "",
+    @ColumnInfo(defaultValue = "''") val productUrl: String = "",
 ) {
     val total: Double get() = (price ?: 0.0) * quantity
 }
+
+@Entity(
+    tableName = "shopping_order_details",
+    foreignKeys = [ForeignKey(
+        entity = ShoppingItem::class,
+        parentColumns = ["id"],
+        childColumns = ["shoppingId"],
+        onDelete = ForeignKey.CASCADE,
+    )],
+)
+data class ShoppingOrderDetails(
+    @PrimaryKey val shoppingId: Long,
+    val orderNumber: String,
+    val orderLine: Int,
+    val productId: String,
+    val purchasedAt: Long,
+    val orderState: String,
+    val shop: String,
+    val brand: String,
+    val sku: String,
+    val productUrl: String,
+    val pregnancyProduct: Boolean,
+    val itemAmountCents: Long?,
+    val orderPaidCents: Long?,
+    val orderShippingCents: Long?,
+)
+
+@Entity(tableName = "shopping_import_batches")
+data class ShoppingImportBatch(@PrimaryKey val id: String)
 
 @Entity(tableName = "shopping_categories")
 data class ShoppingCategory(

@@ -31,7 +31,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -46,6 +48,10 @@ import com.miniyou.app.notify.Reminders
 import com.miniyou.app.ui.Routes
 import com.miniyou.app.ui.components.MessageDialog
 import com.miniyou.app.ui.components.RecordActionsMenu
+import com.miniyou.app.ui.components.RecordSelection
+import com.miniyou.app.ui.components.RecordSelectionBar
+import com.miniyou.app.ui.components.RecordSelectionMark
+import com.miniyou.app.ui.components.rememberRecordSelection
 import com.miniyou.app.ui.components.app
 import com.miniyou.app.ui.theme.LocalWindowLayout
 import java.time.LocalDate
@@ -59,6 +65,7 @@ fun CheckupPlansScreen(nav: NavController, onBack: () -> Unit) {
     val repository = app().checkupPlans
     val plans by repository.all.collectAsState(initial = null)
     val scope = rememberCoroutineScope()
+    val selection = rememberRecordSelection()
     val today = LocalDate.now().toEpochDay()
     PrenatalPage { pad ->
         val colors = LocalPrenatalColors.current
@@ -68,6 +75,9 @@ fun CheckupPlansScreen(nav: NavController, onBack: () -> Unit) {
             }
             val loaded = plans ?: return@Column
             val (upcoming, past) = loaded.partition { it.date >= today }
+            RecordSelectionBar(selection, loaded.map { it.id }, "产检计划", Modifier.padding(horizontal = 14.dp)) {
+                repository.deletePlans(it)
+            }
             LazyColumn(
                 Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 14.dp, end = 14.dp, bottom = 24.dp),
@@ -93,6 +103,7 @@ fun CheckupPlansScreen(nav: NavController, onBack: () -> Unit) {
                 items(upcoming, key = { it.id }) { plan ->
                     PlanCard(
                         plan,
+                        selection = selection,
                         onEdit = { nav.navigate(Routes.checkupPlanEdit(plan.id)) },
                         onDelete = { scope.launch { repository.delete(plan.id) } },
                     )
@@ -102,6 +113,7 @@ fun CheckupPlansScreen(nav: NavController, onBack: () -> Unit) {
                     items(past.asReversed(), key = { it.id }) { plan ->
                         PlanCard(
                             plan,
+                            selection = selection,
                             onEdit = { nav.navigate(Routes.checkupPlanEdit(plan.id)) },
                             onDelete = { scope.launch { repository.delete(plan.id) } },
                         )
@@ -124,10 +136,18 @@ private fun BoxHeader(onBack: () -> Unit, action: @Composable () -> Unit) {
 }
 
 @Composable
-private fun PlanCard(plan: CheckupPlan, onEdit: () -> Unit, onDelete: () -> Unit) {
+private fun PlanCard(plan: CheckupPlan, selection: RecordSelection, onEdit: () -> Unit, onDelete: () -> Unit) {
     val colors = LocalPrenatalColors.current
+    val haptics = LocalHapticFeedback.current
     val date = plan.date.toDate()
-    PrenatalCard(onClick = onEdit, contentPadding = PaddingValues(12.dp)) {
+    PrenatalCard(
+        onClick = { if (selection.active) selection.toggle(plan.id) else onEdit() },
+        onLongClick = {
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            selection.beginWith(plan.id)
+        },
+        contentPadding = PaddingValues(12.dp),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             PrenatalArt(checkupKindArt(plan.project), Modifier.size(46.dp, 40.dp))
             Column(Modifier.padding(start = 8.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -136,7 +156,8 @@ private fun PlanCard(plan: CheckupPlan, onEdit: () -> Unit, onDelete: () -> Unit
                 if (plan.hospital.isNotBlank()) Text(plan.hospital, color = colors.muted, fontSize = 12.sp)
                 if (plan.note.isNotBlank()) Text(plan.note, color = colors.ink, fontSize = 12.sp, maxLines = 2)
             }
-            RecordActionsMenu(
+            if (selection.active) RecordSelectionMark(selection, plan.id, "产检计划")
+            else RecordActionsMenu(
                 "产检计划", DeletePlanMessage,
                 onEdit = onEdit, onDelete = onDelete,
                 modifier = Modifier.align(Alignment.Top), tint = colors.muted,

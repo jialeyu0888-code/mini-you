@@ -73,6 +73,9 @@ interface DiaryDao {
 
     @Delete
     suspend fun delete(item: DiaryEntry)
+
+    @Delete
+    suspend fun deleteMany(items: List<DiaryEntry>)
 }
 
 @Dao
@@ -95,8 +98,23 @@ interface ShoppingDao {
     @Insert
     suspend fun insertAll(items: List<ShoppingItem>)
 
+    @Query("SELECT * FROM shopping_order_details WHERE shoppingId = :id")
+    fun observeOrderDetails(id: Long): Flow<ShoppingOrderDetails?>
+
+    @Insert
+    suspend fun insertOrderDetails(details: ShoppingOrderDetails)
+
+    @Query("SELECT EXISTS(SELECT 1 FROM shopping_import_batches WHERE id = :id)")
+    suspend fun hasImportBatch(id: String): Boolean
+
+    @Insert
+    suspend fun recordImportBatch(batch: ShoppingImportBatch)
+
     @Delete
     suspend fun delete(item: ShoppingItem)
+
+    @Delete
+    suspend fun deleteMany(items: List<ShoppingItem>)
 
     @Query("SELECT * FROM shopping_categories ORDER BY sortOrder, name")
     fun categories(): Flow<List<ShoppingCategory>>
@@ -124,6 +142,9 @@ interface BellyDao {
 
     @Delete
     suspend fun delete(item: BellyPhoto)
+
+    @Delete
+    suspend fun deleteMany(items: List<BellyPhoto>)
 }
 
 @Dao
@@ -139,6 +160,9 @@ interface MyRemedyDao {
 
     @Delete
     suspend fun delete(item: MyRemedy)
+
+    @Delete
+    suspend fun deleteMany(items: List<MyRemedy>)
 
     @Query("SELECT * FROM favorite_methods ORDER BY createdAt DESC")
     fun favorites(): Flow<List<FavoriteMethod>>

@@ -74,6 +74,7 @@ import com.miniyou.app.ui.shopping.ShoppingChecklistScreen
 import com.miniyou.app.ui.shopping.ShoppingDetailScreen
 import com.miniyou.app.ui.shopping.ShoppingEditScreen
 import com.miniyou.app.ui.shopping.ShoppingScreen
+import com.miniyou.app.ui.shopping.ShoppingAnalysisScreen
 import com.miniyou.app.ui.theme.LocalWindowLayout
 
 object Routes {
@@ -86,6 +87,7 @@ object Routes {
     const val SHOPPING_BOARD = "shopping/board"
     const val SHOPPING_LIST = "shopping/list"
     const val SHOPPING_BOUGHT = "shopping/bought"
+    const val SHOPPING_ANALYSIS = "shopping/analysis"
     const val KNOWLEDGE = "knowledge"
     const val SETTINGS = "settings"
     const val CHECKIN = "checkin"
@@ -288,6 +290,7 @@ private fun AppNavHost(nav: NavHostController, modifier: Modifier) {
         composable(Routes.SHOPPING_BOARD) { ShoppingBoardScreen(nav) }
         composable(Routes.SHOPPING_LIST) { ShoppingChecklistScreen(nav) }
         composable(Routes.SHOPPING_BOUGHT) { ShoppingBoughtScreen(nav) }
+        composable(Routes.SHOPPING_ANALYSIS) { ShoppingAnalysisScreen(nav) }
         composable("shopping/view/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) {
             ShoppingDetailScreen(it.arguments?.getLong("id") ?: -1L, nav)
         }

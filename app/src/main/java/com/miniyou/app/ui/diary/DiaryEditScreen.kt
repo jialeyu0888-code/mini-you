@@ -225,9 +225,11 @@ class DiaryEditVM(private val app: MiniYouApp, private val id: Long, initialDate
     }
 }
 
-internal suspend fun deleteDiaryEntry(app: MiniYouApp, entry: DiaryEntry) {
-    app.db.diary().delete(entry)
-    entry.photos.filterNot { it.startsWith("preset:") }.forEach(ImageStore::delete)
+internal suspend fun deleteDiaryEntry(app: MiniYouApp, entry: DiaryEntry) = deleteDiaryEntries(app, listOf(entry))
+
+internal suspend fun deleteDiaryEntries(app: MiniYouApp, entries: List<DiaryEntry>) {
+    app.db.diary().deleteMany(entries)
+    entries.flatMap { it.photos }.distinct().filterNot { it.startsWith("preset:") }.forEach(ImageStore::delete)
 }
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
